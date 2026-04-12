@@ -1,0 +1,9 @@
+# Root-level .dockerignore (for future root-context builds, e.g. frontend)
+# The backend has its own .dockerignore in backend/.dockerignore
+.git
+.idea
+**/target
+**/.mvn
+**/build
+**/node_modules
+backend/build-output.txt

@@ -24,6 +24,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class GlobalExceptionHandlerTest {
 
+    private static final String TEST_BOATS = "/test/boats";
+    private static final String TEST_BOAT_BY_ID = "/test/boats/{id}";
+    private static final String VALIDATION_FAILED = "Validation failed";
+    private static final String AUTHENTICATION_REQUIRED = "Authentication required";
+    private static final String MESSAGE_PATH = "$.message";
+    private static final String STATUS_PATH = "$.status";
+    private static final String PATH_PATH = "$.path";
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -38,16 +46,16 @@ class GlobalExceptionHandlerTest {
     void shouldReturnNotFoundPayloadForBoatNotFoundException() throws Exception {
         UUID boatId = UUID.randomUUID();
 
-        mockMvc.perform(get("/test/boats/{id}", boatId))
+        mockMvc.perform(get(TEST_BOAT_BY_ID, boatId))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Boat not found with id: " + boatId))
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.path").value("/test/boats/" + boatId));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Boat not found with id: " + boatId))
+                .andExpect(jsonPath(STATUS_PATH).value(404))
+                .andExpect(jsonPath(PATH_PATH).value(TEST_BOATS + "/" + boatId));
     }
 
     @Test
     void shouldReturnValidationPayloadForInvalidRequestBody() throws Exception {
-        mockMvc.perform(post("/test/boats")
+        mockMvc.perform(post(TEST_BOATS)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -55,9 +63,9 @@ class GlobalExceptionHandlerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/boats"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
+                .andExpect(jsonPath(STATUS_PATH).value(400))
+                .andExpect(jsonPath(PATH_PATH).value(TEST_BOATS))
                 .andExpect(jsonPath("$.fieldErrors.name").value("Name is required"));
     }
 
@@ -65,51 +73,51 @@ class GlobalExceptionHandlerTest {
     void shouldReturnInternalServerErrorPayloadForUnexpectedException() throws Exception {
         mockMvc.perform(get("/test/unexpected"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.path").value("/test/unexpected"));
+                .andExpect(jsonPath(MESSAGE_PATH).value("An unexpected error occurred"))
+                .andExpect(jsonPath(STATUS_PATH).value(500))
+                .andExpect(jsonPath(PATH_PATH).value("/test/unexpected"));
     }
 
     @Test
     void shouldReturnBadRequestPayloadForMethodArgumentTypeMismatch() throws Exception {
         mockMvc.perform(get("/test/uuid/{id}", "not-a-uuid"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Invalid parameter type"))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/uuid/not-a-uuid"))
+                .andExpect(jsonPath(MESSAGE_PATH).value("Invalid parameter type"))
+                .andExpect(jsonPath(STATUS_PATH).value(400))
+                .andExpect(jsonPath(PATH_PATH).value("/test/uuid/not-a-uuid"))
                 .andExpect(jsonPath("$.fieldErrors.id").value("Expected UUID"));
     }
 
     @Test
     void shouldReturnBadRequestPayloadForMalformedJson() throws Exception {
-        mockMvc.perform(post("/test/boats")
+        mockMvc.perform(post(TEST_BOATS)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Malformed JSON request"))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.path").value("/test/boats"));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Malformed JSON request"))
+                .andExpect(jsonPath(STATUS_PATH).value(400))
+                .andExpect(jsonPath(PATH_PATH).value(TEST_BOATS));
     }
 
     @Test
     void shouldReturnUnauthorizedPayloadForAuthenticationException() throws Exception {
         mockMvc.perform(get("/test/auth"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication required"))
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.path").value("/test/auth"));
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED))
+                .andExpect(jsonPath(STATUS_PATH).value(401))
+                .andExpect(jsonPath(PATH_PATH).value("/test/auth"));
     }
 
     @RestController
     @Validated
     static class TestController {
 
-        @GetMapping("/test/boats/{id}")
+        @GetMapping(TEST_BOAT_BY_ID)
         void boatNotFound(@PathVariable UUID id) {
             throw new BoatNotFoundException(id);
         }
 
-        @PostMapping("/test/boats")
+        @PostMapping(TEST_BOATS)
         TestRequest create(@Valid @RequestBody TestRequest request) {
             return request;
         }
