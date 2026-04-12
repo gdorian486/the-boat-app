@@ -1,0 +1,19 @@
+<div class="dashboard-page">
+  <mat-toolbar class="dashboard-toolbar">
+    <span>Boat Console</span>
+    <span class="toolbar-spacer"></span>
+    <button mat-button type="button" (click)="logout()">Logout</button>
+  </mat-toolbar>
+
+  <main class="dashboard-content">
+    <mat-card class="dashboard-card" appearance="outlined">
+      <mat-card-header>
+        <p class="card-label">Authenticated Area</p>
+      </mat-card-header>
+      <mat-card-content>
+        <h1>Welcome back, {{ username }}.</h1>
+        <p>Authentication is active.</p>
+      </mat-card-content>
+    </mat-card>
+  </main>
+</div>

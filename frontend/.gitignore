@@ -28,6 +28,9 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
+# Generated at build/start time by scripts/generate-runtime-config.mjs
+/public/app-config.json
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/

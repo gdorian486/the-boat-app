@@ -7,8 +7,8 @@
   "resetPasswordAllowed": true,
   "clients": [
     {
-      "clientId": "boat-api",
-      "name": "Boat API",
+      "clientId": "boat-frontend",
+      "name": "Boat Frontend",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": true,
