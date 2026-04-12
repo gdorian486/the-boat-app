@@ -1,0 +1,31 @@
+<section class="login-page" [class.dark-mode]="themeService.theme() === 'dark'" aria-label="Sign in">
+  <p aria-live="polite" class="sr-only">
+    {{ isLoading() ? 'Redirecting to authentication server...' : '' }}
+  </p>
+
+  <mat-card class="login-card" appearance="outlined">
+    <div class="eyebrow" aria-hidden="true">Boat Fleet Console</div>
+    <h1 class="login-title">Sign in</h1>
+    <p class="subtitle">Access the management workspace.</p>
+
+    <button
+      mat-flat-button
+      class="primary-action"
+      type="button"
+      (click)="login()"
+      [disabled]="isLoading()"
+      [attr.aria-busy]="isLoading()"
+    >
+      {{ isLoading() ? 'Redirecting...' : 'Continue with Keycloak' }}
+    </button>
+  </mat-card>
+
+  <button
+    mat-stroked-button
+    class="theme-toggle"
+    type="button"
+    (click)="themeService.toggleTheme()"
+  >
+    {{ themeService.theme() === 'dark' ? 'Light mode' : 'Dark mode' }}
+  </button>
+</section>

@@ -1,5 +1,6 @@
 # Environment
 .env
+frontend/public/app-config.json
 
 # IDE
 .idea/
