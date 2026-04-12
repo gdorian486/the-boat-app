@@ -31,6 +31,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TestcontainersConfiguration.class)
 class BoatApiIntegrationTest {
 
+    private static final String API_BOATS = "/api/boats";
+    private static final String API_BOAT_BY_ID = "/api/boats/{id}";
+    private static final String AUTHENTICATION_REQUIRED = "Authentication required";
+    private static final String VALIDATION_FAILED = "Validation failed";
+    private static final String MESSAGE_PATH = "$.message";
+    private static final String PATH_PATH = "$.path";
+    private static final String NAME_PATH = "$.name";
+    private static final String CAPTAIN = "captain";
+    private static final String ODYSSEY = "Odyssey";
+    private static final String ODYSSEY_II = "Odyssey II";
+    private static final String OCEAN_CAPABLE = "Ocean capable";
+    private static final String REFITTED_FOR_RACING = "Refitted for racing";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -47,8 +60,8 @@ class BoatApiIntegrationTest {
 
     @Test
     void createUpdateGetAndDeleteShouldPersistChangesThroughTheApi() throws Exception {
-        MvcResult createResult = mockMvc.perform(post("/api/boats")
-                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("captain")))
+        MvcResult createResult = mockMvc.perform(post(API_BOATS)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -57,25 +70,27 @@ class BoatApiIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Odyssey"))
-                .andExpect(jsonPath("$.description").value("Ocean capable"))
-                .andExpect(jsonPath("$.createdBy").value("captain"))
+                .andExpect(jsonPath(NAME_PATH).value(ODYSSEY))
+                .andExpect(jsonPath("$.description").value(OCEAN_CAPABLE))
+                .andExpect(jsonPath("$.createdBy").value(CAPTAIN))
                 .andReturn();
 
         UUID boatId = UUID.fromString(readBody(createResult).get("id").asText());
 
         Boat createdBoat = boatRepository.findById(boatId).orElseThrow();
-        assertThat(createdBoat.getName()).isEqualTo("Odyssey");
-        assertThat(createdBoat.getDescription()).isEqualTo("Ocean capable");
-        assertThat(createdBoat.getCreatedBy()).isEqualTo("captain");
+        assertThat(createdBoat.getName()).isEqualTo(ODYSSEY);
+        assertThat(createdBoat.getDescription()).isEqualTo(OCEAN_CAPABLE);
+        assertThat(createdBoat.getCreatedBy()).isEqualTo(CAPTAIN);
         assertThat(createdBoat.getCreatedAt()).isNotNull();
 
-        mockMvc.perform(get("/api/boats/{id}", boatId))
+        mockMvc.perform(get(API_BOAT_BY_ID, boatId)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(boatId.toString()))
-                .andExpect(jsonPath("$.name").value("Odyssey"));
+                .andExpect(jsonPath(NAME_PATH).value(ODYSSEY));
 
-        mockMvc.perform(put("/api/boats/{id}", boatId)
+        mockMvc.perform(put(API_BOAT_BY_ID, boatId)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -85,15 +100,16 @@ class BoatApiIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(boatId.toString()))
-                .andExpect(jsonPath("$.name").value("Odyssey II"))
-                .andExpect(jsonPath("$.description").value("Refitted for racing"))
-                .andExpect(jsonPath("$.createdBy").value("captain"));
+                .andExpect(jsonPath(NAME_PATH).value(ODYSSEY_II))
+                .andExpect(jsonPath("$.description").value(REFITTED_FOR_RACING))
+                .andExpect(jsonPath("$.createdBy").value(CAPTAIN));
 
         Boat updatedBoat = boatRepository.findById(boatId).orElseThrow();
-        assertThat(updatedBoat.getName()).isEqualTo("Odyssey II");
-        assertThat(updatedBoat.getDescription()).isEqualTo("Refitted for racing");
+        assertThat(updatedBoat.getName()).isEqualTo(ODYSSEY_II);
+        assertThat(updatedBoat.getDescription()).isEqualTo(REFITTED_FOR_RACING);
 
-        mockMvc.perform(delete("/api/boats/{id}", boatId))
+        mockMvc.perform(delete(API_BOAT_BY_ID, boatId)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN))))
                 .andExpect(status().isNoContent());
 
         assertThat(boatRepository.findById(boatId)).isEmpty();
@@ -105,7 +121,8 @@ class BoatApiIntegrationTest {
         boatRepository.saveAndFlush(boat("Skylark", "Day sailer", "bob"));
         boatRepository.saveAndFlush(boat("Tidal", "Harbor boat", "carol"));
 
-        mockMvc.perform(get("/api/boats")
+        mockMvc.perform(get(API_BOATS)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN)))
                         .param("page", "0")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -119,8 +136,8 @@ class BoatApiIntegrationTest {
 
     @Test
     void createShouldReturnValidationErrorAndNotPersistBoatWhenPayloadIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/boats")
-                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject("captain")))
+        mockMvc.perform(post(API_BOATS)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -129,7 +146,7 @@ class BoatApiIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
                 .andExpect(jsonPath("$.fieldErrors.name").value("Name is required"));
 
         assertThat(boatRepository.count()).isZero();
@@ -137,7 +154,7 @@ class BoatApiIntegrationTest {
 
     @Test
     void createShouldReturnUnauthorizedWhenJwtSubjectIsBlank() throws Exception {
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
                         .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(" ")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -147,8 +164,8 @@ class BoatApiIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication required"))
-                .andExpect(jsonPath("$.path").value("/api/boats"));
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS));
 
         assertThat(boatRepository.count()).isZero();
     }
@@ -157,7 +174,8 @@ class BoatApiIntegrationTest {
     void updateShouldReturnNotFoundWhenBoatDoesNotExist() throws Exception {
         UUID missingId = UUID.randomUUID();
 
-        mockMvc.perform(put("/api/boats/{id}", missingId)
+        mockMvc.perform(put(API_BOAT_BY_ID, missingId)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -166,18 +184,30 @@ class BoatApiIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Boat not found with id: " + missingId))
-                .andExpect(jsonPath("$.path").value("/api/boats/" + missingId));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Boat not found with id: " + missingId))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS + "/" + missingId));
     }
 
     @Test
     void deleteShouldReturnNotFoundWhenBoatDoesNotExist() throws Exception {
         UUID missingId = UUID.randomUUID();
 
-        mockMvc.perform(delete("/api/boats/{id}", missingId))
+        mockMvc.perform(delete(API_BOAT_BY_ID, missingId)
+                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.subject(CAPTAIN))))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Boat not found with id: " + missingId))
-                .andExpect(jsonPath("$.path").value("/api/boats/" + missingId));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Boat not found with id: " + missingId))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS + "/" + missingId));
+    }
+
+    @Test
+    void findAllShouldReturnUnauthorizedWhenJwtIsMissing() throws Exception {
+        boatRepository.saveAndFlush(boat("Aurora", "Long-range cruiser", "alice"));
+
+        mockMvc.perform(get(API_BOATS)
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED));
     }
 
     private JsonNode readBody(MvcResult result) throws Exception {

@@ -1,0 +1,56 @@
+{
+  "realm": "boat",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "clients": [
+    {
+      "clientId": "boat-api",
+      "name": "Boat API",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "boat-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "boat-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "captain",
+      "enabled": true,
+      "email": "captain@example.com",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Captain",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "captain123",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BoatServiceTest {
 
+    private static final String BOAT_NOT_FOUND_WITH_ID = "Boat not found with id: ";
+    private static final String CAPTAIN = "captain";
+    private static final String ODYSSEY = "Odyssey";
+    private static final String OCEAN_CAPABLE = "Ocean capable";
+    private static final String NEW_NAME = "New Name";
+    private static final String UPDATED_DESCRIPTION = "Updated description";
+
     @Mock
     private BoatRepository boatRepository;
 
@@ -94,12 +101,12 @@ class BoatServiceTest {
 
         assertThatThrownBy(() -> boatService.findById(boatId))
                 .isInstanceOf(BoatNotFoundException.class)
-                .hasMessage("Boat not found with id: " + boatId);
+                .hasMessage(BOAT_NOT_FOUND_WITH_ID + boatId);
     }
 
     @Test
     void createShouldPopulateBoatAndReturnSavedBoatResponse() {
-        BoatRequest request = new BoatRequest("Odyssey", "Ocean capable");
+        BoatRequest request = new BoatRequest(ODYSSEY, OCEAN_CAPABLE);
         Instant createdAt = Instant.parse("2026-04-11T08:00:00Z");
         UUID savedId = UUID.randomUUID();
 
@@ -110,19 +117,19 @@ class BoatServiceTest {
             return savedBoat;
         });
 
-        BoatResponse result = boatService.create(request, "captain");
+        BoatResponse result = boatService.create(request, CAPTAIN);
 
         ArgumentCaptor<Boat> boatCaptor = ArgumentCaptor.forClass(Boat.class);
         verify(boatRepository).save(boatCaptor.capture());
         Boat persistedBoat = boatCaptor.getValue();
-        assertThat(persistedBoat.getName()).isEqualTo("Odyssey");
-        assertThat(persistedBoat.getDescription()).isEqualTo("Ocean capable");
-        assertThat(persistedBoat.getCreatedBy()).isEqualTo("captain");
+        assertThat(persistedBoat.getName()).isEqualTo(ODYSSEY);
+        assertThat(persistedBoat.getDescription()).isEqualTo(OCEAN_CAPABLE);
+        assertThat(persistedBoat.getCreatedBy()).isEqualTo(CAPTAIN);
 
         assertThat(result.id()).isEqualTo(savedId);
-        assertThat(result.name()).isEqualTo("Odyssey");
-        assertThat(result.description()).isEqualTo("Ocean capable");
-        assertThat(result.createdBy()).isEqualTo("captain");
+        assertThat(result.name()).isEqualTo(ODYSSEY);
+        assertThat(result.description()).isEqualTo(OCEAN_CAPABLE);
+        assertThat(result.createdBy()).isEqualTo(CAPTAIN);
         assertThat(result.createdAt()).isEqualTo(createdAt);
     }
 
@@ -136,17 +143,17 @@ class BoatServiceTest {
                 "owner",
                 Instant.parse("2026-04-01T10:30:00Z")
         );
-        BoatRequest request = new BoatRequest("New Name", "Updated description");
+        BoatRequest request = new BoatRequest(NEW_NAME, UPDATED_DESCRIPTION);
 
         when(boatRepository.findById(boatId)).thenReturn(Optional.of(existingBoat));
 
         BoatResponse result = boatService.update(boatId, request);
 
-        assertThat(existingBoat.getName()).isEqualTo("New Name");
-        assertThat(existingBoat.getDescription()).isEqualTo("Updated description");
+        assertThat(existingBoat.getName()).isEqualTo(NEW_NAME);
+        assertThat(existingBoat.getDescription()).isEqualTo(UPDATED_DESCRIPTION);
         assertThat(result.id()).isEqualTo(boatId);
-        assertThat(result.name()).isEqualTo("New Name");
-        assertThat(result.description()).isEqualTo("Updated description");
+        assertThat(result.name()).isEqualTo(NEW_NAME);
+        assertThat(result.description()).isEqualTo(UPDATED_DESCRIPTION);
         assertThat(result.createdBy()).isEqualTo("owner");
         assertThat(result.createdAt()).isEqualTo(existingBoat.getCreatedAt());
     }
@@ -160,7 +167,7 @@ class BoatServiceTest {
 
         assertThatThrownBy(() -> boatService.update(boatId, request))
                 .isInstanceOf(BoatNotFoundException.class)
-                .hasMessage("Boat not found with id: " + boatId);
+                .hasMessage(BOAT_NOT_FOUND_WITH_ID + boatId);
     }
 
     @Test
@@ -182,7 +189,7 @@ class BoatServiceTest {
 
         assertThatThrownBy(() -> boatService.delete(boatId))
                 .isInstanceOf(BoatNotFoundException.class)
-                .hasMessage("Boat not found with id: " + boatId);
+                .hasMessage(BOAT_NOT_FOUND_WITH_ID + boatId);
     }
 
     private Boat boat(UUID id, String name, String description, String createdBy, Instant createdAt) {

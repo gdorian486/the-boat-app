@@ -40,6 +40,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class BoatControllerTest {
 
+    private static final String API_BOATS = "/api/boats";
+    private static final String API_BOAT_BY_ID = "/api/boats/{id}";
+    private static final String AUTHENTICATION_REQUIRED = "Authentication required";
+    private static final String VALIDATION_FAILED = "Validation failed";
+    private static final String MESSAGE_PATH = "$.message";
+    private static final String PATH_PATH = "$.path";
+    private static final String NAME_PATH = "$.name";
+    private static final String CAPTAIN = "captain";
+    private static final String ODYSSEY = "Odyssey";
+    private static final String OCEAN_CAPABLE = "Ocean capable";
+    private static final String NEW_NAME = "New Name";
+    private static final String UPDATED_DESCRIPTION = "Updated description";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -63,7 +76,8 @@ class BoatControllerTest {
         when(boatService.findAll(expectedPageRequest))
                 .thenReturn(new PageImpl<>(List.of(boat), expectedPageRequest, 6));
 
-        mockMvc.perform(get("/api/boats")
+        mockMvc.perform(get(API_BOATS)
+                        .with(jwt())
                         .param("page", "1")
                         .param("size", "5"))
                 .andExpect(status().isOk())
@@ -79,10 +93,11 @@ class BoatControllerTest {
 
     @Test
     void findAllShouldReturnValidationErrorWhenPageIsNegative() throws Exception {
-        mockMvc.perform(get("/api/boats")
+        mockMvc.perform(get(API_BOATS)
+                        .with(jwt())
                         .param("page", "-1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
                 .andExpect(jsonPath("$.fieldErrors.page").value("Page must be greater than or equal to 0"));
 
         verify(boatService, never()).findAll(any());
@@ -90,10 +105,11 @@ class BoatControllerTest {
 
     @Test
     void findAllShouldReturnValidationErrorWhenSizeExceedsMaximum() throws Exception {
-        mockMvc.perform(get("/api/boats")
+        mockMvc.perform(get(API_BOATS)
+                        .with(jwt())
                         .param("size", "101"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
                 .andExpect(jsonPath("$.fieldErrors.size").value("Size must be less than or equal to 100"));
 
         verify(boatService, never()).findAll(any());
@@ -101,10 +117,11 @@ class BoatControllerTest {
 
     @Test
     void findAllShouldReturnValidationErrorWhenSizeIsZero() throws Exception {
-        mockMvc.perform(get("/api/boats")
+        mockMvc.perform(get(API_BOATS)
+                        .with(jwt())
                         .param("size", "0"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
                 .andExpect(jsonPath("$.fieldErrors.size").value("Size must be greater than 0"));
 
         verify(boatService, never()).findAll(any());
@@ -123,10 +140,11 @@ class BoatControllerTest {
 
         when(boatService.findById(boatId)).thenReturn(response);
 
-        mockMvc.perform(get("/api/boats/{id}", boatId))
+        mockMvc.perform(get(API_BOAT_BY_ID, boatId)
+                        .with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(boatId.toString()))
-                .andExpect(jsonPath("$.name").value("Skylark"))
+                .andExpect(jsonPath(NAME_PATH).value("Skylark"))
                 .andExpect(jsonPath("$.createdBy").value("bob"));
     }
 
@@ -136,76 +154,78 @@ class BoatControllerTest {
 
         when(boatService.findById(boatId)).thenThrow(new BoatNotFoundException(boatId));
 
-        mockMvc.perform(get("/api/boats/{id}", boatId))
+        mockMvc.perform(get(API_BOAT_BY_ID, boatId)
+                        .with(jwt()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Boat not found with id: " + boatId))
-                .andExpect(jsonPath("$.path").value("/api/boats/" + boatId));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Boat not found with id: " + boatId))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS + "/" + boatId));
     }
 
     @Test
     void createShouldReturnCreatedBoatWhenJwtSubjectIsPresent() throws Exception {
-        BoatRequest request = new BoatRequest("Odyssey", "Ocean capable");
+        BoatRequest request = new BoatRequest(ODYSSEY, OCEAN_CAPABLE);
         BoatResponse response = new BoatResponse(
                 UUID.randomUUID(),
-                "Odyssey",
-                "Ocean capable",
-                "captain",
+                ODYSSEY,
+                OCEAN_CAPABLE,
+                CAPTAIN,
                 Instant.parse("2026-04-11T08:00:00Z")
         );
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")
-                .subject("captain")
+                .subject(CAPTAIN)
                 .build();
 
-        when(boatService.create(request, "captain")).thenReturn(response);
+        when(boatService.create(request, CAPTAIN)).thenReturn(response);
 
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
                         .with(jwt().jwt(jwt))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Odyssey"))
-                .andExpect(jsonPath("$.createdBy").value("captain"));
+                .andExpect(jsonPath(NAME_PATH).value(ODYSSEY))
+                .andExpect(jsonPath("$.createdBy").value(CAPTAIN));
 
-        verify(boatService).create(request, "captain");
+        verify(boatService).create(request, CAPTAIN);
     }
 
     @Test
     void createShouldReturnUnauthorizedWhenJwtIsMissing() throws Exception {
-        BoatRequest request = new BoatRequest("Odyssey", "Ocean capable");
+        BoatRequest request = new BoatRequest(ODYSSEY, OCEAN_CAPABLE);
 
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication required"))
-                .andExpect(jsonPath("$.path").value("/api/boats"));
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS));
 
         verify(boatService, never()).create(any(), any());
     }
 
     @Test
     void createShouldReturnUnauthorizedWhenJwtSubjectIsBlank() throws Exception {
-        BoatRequest request = new BoatRequest("Odyssey", "Ocean capable");
+        BoatRequest request = new BoatRequest(ODYSSEY, OCEAN_CAPABLE);
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")
                 .subject(" ")
                 .build();
 
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
                         .with(jwt().jwt(jwt))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication required"))
-                .andExpect(jsonPath("$.path").value("/api/boats"));
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS));
 
         verify(boatService, never()).create(any(), any());
     }
 
     @Test
     void createShouldReturnValidationErrorWhenRequestBodyIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -214,7 +234,7 @@ class BoatControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath(MESSAGE_PATH).value(VALIDATION_FAILED))
                 .andExpect(jsonPath("$.fieldErrors.name").value("Name is required"));
 
         verify(boatService, never()).create(any(), any());
@@ -222,12 +242,13 @@ class BoatControllerTest {
 
     @Test
     void createShouldReturnBadRequestWhenJsonIsMalformed() throws Exception {
-        mockMvc.perform(post("/api/boats")
+        mockMvc.perform(post(API_BOATS)
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Malformed JSON request"))
-                .andExpect(jsonPath("$.path").value("/api/boats"));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Malformed JSON request"))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS));
 
         verify(boatService, never()).create(any(), any());
     }
@@ -235,23 +256,24 @@ class BoatControllerTest {
     @Test
     void updateShouldReturnUpdatedBoatWhenRequestIsValid() throws Exception {
         UUID boatId = UUID.randomUUID();
-        BoatRequest request = new BoatRequest("New Name", "Updated description");
+        BoatRequest request = new BoatRequest(NEW_NAME, UPDATED_DESCRIPTION);
         BoatResponse response = new BoatResponse(
                 boatId,
-                "New Name",
-                "Updated description",
+                NEW_NAME,
+                UPDATED_DESCRIPTION,
                 "owner",
                 Instant.parse("2026-04-01T10:30:00Z")
         );
 
         when(boatService.update(boatId, request)).thenReturn(response);
 
-        mockMvc.perform(put("/api/boats/{id}", boatId)
+        mockMvc.perform(put(API_BOAT_BY_ID, boatId)
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(boatId.toString()))
-                .andExpect(jsonPath("$.name").value("New Name"));
+                .andExpect(jsonPath(NAME_PATH).value(NEW_NAME));
 
         verify(boatService).update(boatId, request);
     }
@@ -259,23 +281,25 @@ class BoatControllerTest {
     @Test
     void updateShouldReturnNotFoundWhenBoatDoesNotExist() throws Exception {
         UUID boatId = UUID.randomUUID();
-        BoatRequest request = new BoatRequest("New Name", "Updated description");
+        BoatRequest request = new BoatRequest(NEW_NAME, UPDATED_DESCRIPTION);
 
         when(boatService.update(eq(boatId), any(BoatRequest.class))).thenThrow(new BoatNotFoundException(boatId));
 
-        mockMvc.perform(put("/api/boats/{id}", boatId)
+        mockMvc.perform(put(API_BOAT_BY_ID, boatId)
+                        .with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Boat not found with id: " + boatId))
-                .andExpect(jsonPath("$.path").value("/api/boats/" + boatId));
+                .andExpect(jsonPath(MESSAGE_PATH).value("Boat not found with id: " + boatId))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS + "/" + boatId));
     }
 
     @Test
     void deleteShouldReturnNoContentWhenBoatExists() throws Exception {
         UUID boatId = UUID.randomUUID();
 
-        mockMvc.perform(delete("/api/boats/{id}", boatId))
+        mockMvc.perform(delete(API_BOAT_BY_ID, boatId)
+                        .with(jwt()))
                 .andExpect(status().isNoContent());
 
         verify(boatService).delete(boatId);
@@ -283,10 +307,32 @@ class BoatControllerTest {
 
     @Test
     void findByIdShouldReturnBadRequestWhenIdFormatIsInvalid() throws Exception {
-        mockMvc.perform(get("/api/boats/{id}", "not-a-uuid"))
+        mockMvc.perform(get(API_BOAT_BY_ID, "not-a-uuid")
+                        .with(jwt()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Invalid parameter type"))
+                .andExpect(jsonPath(MESSAGE_PATH).value("Invalid parameter type"))
                 .andExpect(jsonPath("$.fieldErrors.id").value("Expected UUID"));
+
+        verify(boatService, never()).findById(any());
+    }
+
+    @Test
+    void findAllShouldReturnUnauthorizedWhenJwtIsMissing() throws Exception {
+        mockMvc.perform(get(API_BOATS))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED))
+                .andExpect(jsonPath(PATH_PATH).value(API_BOATS));
+
+        verify(boatService, never()).findAll(any());
+    }
+
+    @Test
+    void findByIdShouldReturnUnauthorizedWhenJwtIsMissing() throws Exception {
+        UUID boatId = UUID.randomUUID();
+
+        mockMvc.perform(get(API_BOAT_BY_ID, boatId))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath(MESSAGE_PATH).value(AUTHENTICATION_REQUIRED));
 
         verify(boatService, never()).findById(any());
     }
