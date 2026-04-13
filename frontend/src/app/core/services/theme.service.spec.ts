@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { ThemeService } from './theme.service';
 
+const THEME_STORAGE_KEY = 'app-theme';
+
 describe('ThemeService', () => {
   let mediaQueryListener: ((event: MediaQueryListEvent) => void) | undefined;
   let matches = false;
@@ -49,7 +51,7 @@ describe('ThemeService', () => {
   }
 
   it('uses the stored theme when available', () => {
-    window.localStorage.setItem('login-theme', 'dark');
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
 
     const service = createService();
     TestBed.flushEffects();
@@ -76,7 +78,7 @@ describe('ThemeService', () => {
     TestBed.flushEffects();
 
     expect(service.theme()).toBe('dark');
-    expect(window.localStorage.getItem('login-theme')).toBe('dark');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
     expect(document.documentElement.classList.contains('dark-mode')).toBeTrue();
   });
 
@@ -91,7 +93,7 @@ describe('ThemeService', () => {
   });
 
   it('ignores OS theme changes when a stored theme exists', () => {
-    window.localStorage.setItem('login-theme', 'light');
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
     const service = createService();
     TestBed.flushEffects();
 
