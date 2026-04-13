@@ -42,14 +42,14 @@ public class BoatController {
             @RequestParam(defaultValue = "0") @PositiveOrZero(message = "Page must be greater than or equal to 0") int page,
             @RequestParam(defaultValue = "10") @Positive(message = "Size must be greater than 0") @Max(value = 100, message = "Size must be less than or equal to 100") int size
     ) {
-        log.debug("GET /api/boats - page={}, size={}", page, size);
+        log.info("GET /api/boats - page={}, size={}", page, size);
         Page<BoatResponse> boats = boatService.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(PagedResponse.from(boats));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<BoatResponse> findById(@PathVariable UUID id) {
-        log.debug("GET /api/boats/{}", id);
+        log.info("GET /api/boats/{}", id);
         return ResponseEntity.ok(boatService.findById(id));
     }
 
@@ -58,8 +58,14 @@ public class BoatController {
         if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
             throw new AuthenticationCredentialsNotFoundException("Authentication is required to create a boat");
         }
+        UUID createdBy;
+        try {
+            createdBy = UUID.fromString(jwt.getSubject());
+        } catch (IllegalArgumentException exception) {
+            throw new AuthenticationCredentialsNotFoundException("Authentication is required to create a boat", exception);
+        }
         log.info("POST /api/boats");
-        return ResponseEntity.status(HttpStatus.CREATED).body(boatService.create(request, jwt.getSubject()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(boatService.create(request, createdBy));
     }
 
     @PutMapping("/{id}")

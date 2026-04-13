@@ -7,7 +7,7 @@ public record BoatResponse(
         UUID id,
         String name,
         String description,
-        String createdBy,
+        UUID createdBy,
         Instant createdAt
 ) {
 }

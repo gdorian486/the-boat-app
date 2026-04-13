@@ -40,7 +40,7 @@ public class BoatService {
     }
 
     @Transactional
-    public BoatResponse create(BoatRequest request, String createdBy) {
+    public BoatResponse create(BoatRequest request, UUID createdBy) {
         Boat boat = new Boat();
         boat.setName(request.name());
         boat.setDescription(request.description());

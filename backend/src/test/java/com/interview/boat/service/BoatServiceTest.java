@@ -31,7 +31,10 @@ import static org.mockito.Mockito.when;
 class BoatServiceTest {
 
     private static final String BOAT_NOT_FOUND_WITH_ID = "Boat not found with id: ";
-    private static final String CAPTAIN = "captain";
+    private static final UUID CAPTAIN = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID ALICE = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    private static final UUID BOB = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final UUID OWNER = UUID.fromString("44444444-4444-4444-4444-444444444444");
     private static final String ODYSSEY = "Odyssey";
     private static final String OCEAN_CAPABLE = "Ocean capable";
     private static final String NEW_NAME = "New Name";
@@ -50,7 +53,7 @@ class BoatServiceTest {
                 UUID.randomUUID(),
                 "Aurora",
                 "Long-range cruiser",
-                "alice",
+                ALICE,
                 Instant.parse("2026-04-10T09:15:00Z")
         );
         Page<Boat> page = new PageImpl<>(List.of(boat), pageable, 6);
@@ -65,7 +68,7 @@ class BoatServiceTest {
                     assertThat(response.id()).isEqualTo(boat.getId());
                     assertThat(response.name()).isEqualTo("Aurora");
                     assertThat(response.description()).isEqualTo("Long-range cruiser");
-                    assertThat(response.createdBy()).isEqualTo("alice");
+                    assertThat(response.createdBy()).isEqualTo(ALICE);
                     assertThat(response.createdAt()).isEqualTo(boat.getCreatedAt());
                 });
         assertThat(result.getTotalElements()).isEqualTo(6);
@@ -78,7 +81,7 @@ class BoatServiceTest {
                 boatId,
                 "Skylark",
                 "Day sailer",
-                "bob",
+                BOB,
                 Instant.parse("2026-04-09T12:00:00Z")
         );
 
@@ -89,7 +92,7 @@ class BoatServiceTest {
         assertThat(result.id()).isEqualTo(boatId);
         assertThat(result.name()).isEqualTo("Skylark");
         assertThat(result.description()).isEqualTo("Day sailer");
-        assertThat(result.createdBy()).isEqualTo("bob");
+        assertThat(result.createdBy()).isEqualTo(BOB);
         assertThat(result.createdAt()).isEqualTo(boat.getCreatedAt());
     }
 
@@ -140,7 +143,7 @@ class BoatServiceTest {
                 boatId,
                 "Old Name",
                 "Old description",
-                "owner",
+                OWNER,
                 Instant.parse("2026-04-01T10:30:00Z")
         );
         BoatRequest request = new BoatRequest(NEW_NAME, UPDATED_DESCRIPTION);
@@ -154,7 +157,7 @@ class BoatServiceTest {
         assertThat(result.id()).isEqualTo(boatId);
         assertThat(result.name()).isEqualTo(NEW_NAME);
         assertThat(result.description()).isEqualTo(UPDATED_DESCRIPTION);
-        assertThat(result.createdBy()).isEqualTo("owner");
+        assertThat(result.createdBy()).isEqualTo(OWNER);
         assertThat(result.createdAt()).isEqualTo(existingBoat.getCreatedAt());
     }
 
@@ -192,7 +195,7 @@ class BoatServiceTest {
                 .hasMessage(BOAT_NOT_FOUND_WITH_ID + boatId);
     }
 
-    private Boat boat(UUID id, String name, String description, String createdBy, Instant createdAt) {
+    private Boat boat(UUID id, String name, String description, UUID createdBy, Instant createdAt) {
         Boat boat = new Boat();
         boat.setId(id);
         boat.setName(name);

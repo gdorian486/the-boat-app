@@ -3,7 +3,7 @@ set -eu
 
 : "${KEYCLOAK_URL:=http://localhost:8081}"
 : "${KEYCLOAK_REALM:=boat}"
-: "${KEYCLOAK_CLIENT_ID:=boat-api}"
+: "${KEYCLOAK_CLIENT_ID:=boat-frontend}"
 : "${API_BASE_URL:=http://localhost:8080}"
 
 envsubst '${KEYCLOAK_URL} ${KEYCLOAK_REALM} ${KEYCLOAK_CLIENT_ID} ${API_BASE_URL}' \

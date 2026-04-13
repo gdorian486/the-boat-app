@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { provideRouter, Router } from '@angular/router';
-import { RouterOutlet } from '@angular/router';
+import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import Keycloak from 'keycloak-js';
 import { routes } from './app.routes';
@@ -13,29 +12,29 @@ import { routes } from './app.routes';
 })
 class TestHostComponent {}
 
-describe('app routes', () => {
-  async function configureRoutes(authenticated = false): Promise<void> {
-    await TestBed.configureTestingModule({
-      imports: [TestHostComponent],
-      providers: [
-        provideRouter(routes),
-        {
-          provide: Keycloak,
-          useValue: {
-            authenticated,
-            login: jasmine.createSpy('login').and.returnValue(Promise.resolve())
-          }
-        },
-        {
-          provide: MatSnackBar,
-          useValue: {
-            open: jasmine.createSpy('open')
-          }
+async function configureRoutes(authenticated = false): Promise<void> {
+  await TestBed.configureTestingModule({
+    imports: [TestHostComponent],
+    providers: [
+      provideRouter(routes),
+      {
+        provide: Keycloak,
+        useValue: {
+          authenticated,
+          login: jasmine.createSpy('login').and.returnValue(Promise.resolve())
         }
-      ]
-    }).compileComponents();
-  }
+      },
+      {
+        provide: MatSnackBar,
+        useValue: {
+          open: jasmine.createSpy('open')
+        }
+      }
+    ]
+  }).compileComponents();
+}
 
+describe('app routes', () => {
   it('renders the login page for /login', async () => {
     await configureRoutes(false);
 

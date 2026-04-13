@@ -9,7 +9,7 @@ describe('runtime-config', () => {
   };
 
   beforeEach(() => {
-    spyOn(window, 'fetch');
+    spyOn(globalThis, 'fetch');
   });
 
   it('isRuntimeConfig returns true for a complete config object', () => {
@@ -26,20 +26,20 @@ describe('runtime-config', () => {
   });
 
   it('loads the config from the first matching candidate url', async () => {
-    (window.fetch as jasmine.Spy).and.resolveTo({
+    (globalThis.fetch as jasmine.Spy).and.resolveTo({
       ok: true,
       json: () => Promise.resolve(validConfig)
     } as Response);
 
     await expectAsync(loadRuntimeConfig()).toBeResolvedTo(validConfig);
-    expect(window.fetch).toHaveBeenCalledWith('app-config.json');
+    expect(globalThis.fetch).toHaveBeenCalledWith('app-config.json');
   });
 
   it('falls back to the second candidate url when the first one is unavailable', async () => {
-    (window.fetch as jasmine.Spy)
+    (globalThis.fetch as jasmine.Spy)
       .withArgs('app-config.json')
       .and.resolveTo({ ok: false } as Response);
-    (window.fetch as jasmine.Spy)
+    (globalThis.fetch as jasmine.Spy)
       .withArgs('/app-config.json')
       .and.resolveTo({
         ok: true,
@@ -47,12 +47,12 @@ describe('runtime-config', () => {
       } as Response);
 
     await expectAsync(loadRuntimeConfig()).toBeResolvedTo(validConfig);
-    expect(window.fetch).toHaveBeenCalledWith('app-config.json');
-    expect(window.fetch).toHaveBeenCalledWith('/app-config.json');
+    expect(globalThis.fetch).toHaveBeenCalledWith('app-config.json');
+    expect(globalThis.fetch).toHaveBeenCalledWith('/app-config.json');
   });
 
   it('throws when the runtime config json is invalid', async () => {
-    (window.fetch as jasmine.Spy).and.resolveTo({
+    (globalThis.fetch as jasmine.Spy).and.resolveTo({
       ok: true,
       json: () => Promise.reject(new Error('invalid json'))
     } as Response);
@@ -63,7 +63,7 @@ describe('runtime-config', () => {
   });
 
   it('throws when the runtime config object is missing required fields', async () => {
-    (window.fetch as jasmine.Spy).and.resolveTo({
+    (globalThis.fetch as jasmine.Spy).and.resolveTo({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -78,7 +78,7 @@ describe('runtime-config', () => {
   });
 
   it('throws when no runtime config file is found', async () => {
-    (window.fetch as jasmine.Spy).and.resolveTo({ ok: false } as Response);
+    (globalThis.fetch as jasmine.Spy).and.resolveTo({ ok: false } as Response);
 
     await expectAsync(loadRuntimeConfig()).toBeRejectedWithError(
       'Failed to load app runtime config: file not found at any of: app-config.json, /app-config.json'

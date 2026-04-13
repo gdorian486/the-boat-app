@@ -74,7 +74,7 @@ describe('LoginPageComponent', () => {
     await fixture.whenStable();
 
     expect(loginSpy).toHaveBeenCalledWith({
-      redirectUri: `${window.location.origin}/boats`
+      redirectUri: `${globalThis.location.origin}/boats`
     });
   });
 
