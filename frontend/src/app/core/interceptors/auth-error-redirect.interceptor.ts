@@ -16,7 +16,7 @@ export const authErrorRedirectInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: unknown) => {
       if (shouldRedirectToLogin(error, req.url, runtimeConfig.apiBaseUrl, router.url)) {
         keycloak.clearToken();
-        void router.navigate([`/${APP_PATHS.LOGIN}`]);
+        router.navigate([`/${APP_PATHS.LOGIN}`]);
       }
 
       return throwError(() => error);
