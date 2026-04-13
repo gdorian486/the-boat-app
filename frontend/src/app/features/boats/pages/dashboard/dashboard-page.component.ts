@@ -1,19 +1,23 @@
 import { DatePipe, DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import Keycloak from 'keycloak-js';
-import { catchError, EMPTY, startWith, Subject, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, filter, switchMap, take } from 'rxjs';
 
 import { APP_PATHS } from '../../../../app.routes.constants';
 import { ThemeService } from '../../../../core/services/theme.service';
-import { Boat, PagedResponse } from '../../models/boat.model';
-import { BoatsService } from '../../services/boats.service';
+import { Boat, BoatMutationPayload } from '../../models/boat.model';
+import { BoatDeleteConfirmDialogComponent } from '../../components/boat-delete-confirm-dialog/boat-delete-confirm-dialog.component';
+import { BoatFormDialogComponent } from '../../components/boat-form-dialog/boat-form-dialog.component';
+import { BoatsDashboardStore } from './boats-dashboard.store';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -21,61 +25,32 @@ import { BoatsService } from '../../services/boats.service';
     DatePipe,
     MatButtonModule,
     MatCardModule,
+    MatDialogModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     MatTableModule,
     MatToolbarModule
   ],
+  providers: [BoatsDashboardStore],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardPageComponent {
-  private readonly boatsService = inject(BoatsService);
+  protected readonly store = inject(BoatsDashboardStore);
+
   private readonly keycloak = inject(Keycloak);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly themeService = inject(ThemeService);
-  private readonly paginationRequests = new Subject<{ page: number; size: number }>();
 
   protected readonly theme = this.themeService.theme;
   protected readonly toggleTheme = () => this.themeService.toggleTheme();
   protected readonly username: string = this.keycloak.tokenParsed?.['preferred_username'] ?? '';
-  protected readonly displayedColumns = ['id', 'name', 'description', 'createdAt'];
-  protected readonly pageSizeOptions = [10, 20, 50, 100];
-  protected readonly boats = signal<Boat[]>([]);
-  protected readonly isLoading = signal(true);
-  protected readonly errorMessage = signal<string | null>(null);
-  protected readonly totalElements = signal(0);
-  protected readonly currentPage = signal(0);
-  protected readonly currentPageSize = signal(10);
-
-  constructor() {
-    this.paginationRequests
-      .pipe(
-        startWith({ page: this.currentPage(), size: this.currentPageSize() }),
-        tap(({ page, size }) => {
-          this.currentPage.set(page);
-          this.currentPageSize.set(size);
-          this.isLoading.set(true);
-          this.errorMessage.set(null);
-        }),
-        switchMap(({ page, size }) =>
-          this.boatsService.getBoats(page, size).pipe(
-            tap((response) => this.applyResponse(response)),
-            catchError(() => {
-              this.boats.set([]);
-              this.totalElements.set(0);
-              this.errorMessage.set('Unable to load boats. Please try again.');
-              this.isLoading.set(false);
-              return EMPTY;
-            })
-          )
-        ),
-        takeUntilDestroyed()
-      )
-      .subscribe();
-  }
-
+  protected readonly displayedColumns = ['id', 'name', 'description', 'createdAt', 'actions'];
 
   protected logout(): void {
     this.keycloak.logout({
@@ -86,28 +61,90 @@ export class DashboardPageComponent {
   }
 
   protected onPageChange(event: PageEvent): void {
-    this.paginationRequests.next({
-      page: event.pageIndex,
-      size: event.pageSize
-    });
-  }
-
-  protected retry(): void {
-    this.paginationRequests.next({
-      page: this.currentPage(),
-      size: this.currentPageSize()
-    });
+    this.store.loadPage(event.pageIndex, event.pageSize);
   }
 
   protected trackBoat(_index: number, boat: Boat): string {
     return boat.id;
   }
 
-  private applyResponse(response: PagedResponse<Boat>): void {
-    this.boats.set(response.content);
-    this.totalElements.set(response.totalElements);
-    this.currentPage.set(response.page);
-    this.currentPageSize.set(response.size);
-    this.isLoading.set(false);
+  protected openCreateDialog(): void {
+    this.dialog
+      .open(BoatFormDialogComponent, {
+        data: { mode: 'create' },
+        panelClass: ['boat-dialog']
+      })
+      .afterClosed()
+      .pipe(
+        take(1),
+        filter((payload): payload is BoatMutationPayload => payload !== undefined),
+        switchMap((payload) =>
+          this.store.create(payload).pipe(
+            catchError(() => {
+              this.showMutationError('Unable to create boat. Please try again.');
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+  }
+
+  protected openUpdateDialog(boat: Boat): void {
+    this.dialog
+      .open(BoatFormDialogComponent, {
+        data: {
+          mode: 'update',
+          boat: { name: boat.name, description: boat.description }
+        },
+        panelClass: ['boat-dialog']
+      })
+      .afterClosed()
+      .pipe(
+        take(1),
+        filter((payload): payload is BoatMutationPayload => payload !== undefined),
+        switchMap((payload) =>
+          this.store.update(boat.id, payload).pipe(
+            catchError(() => {
+              this.showMutationError('Unable to update boat. Please try again.');
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+  }
+
+  protected confirmDelete(boat: Boat): void {
+    this.dialog
+      .open(BoatDeleteConfirmDialogComponent, {
+        data: { name: boat.name },
+        panelClass: ['boat-dialog']
+      })
+      .afterClosed()
+      .pipe(
+        take(1),
+        filter((confirmed): confirmed is true => confirmed === true),
+        switchMap(() =>
+          this.store.delete(boat.id).pipe(
+            catchError(() => {
+              this.showMutationError('Unable to delete boat. Please try again.');
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe();
+  }
+
+
+  private showMutationError(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
+    });
   }
 }

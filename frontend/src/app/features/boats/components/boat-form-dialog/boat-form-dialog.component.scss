@@ -1,0 +1,36 @@
+:host {
+  --dialog-accent: #0f5c7a;
+  display: block;
+}
+
+.boat-form {
+  display: grid;
+  gap: 16px;
+  min-width: min(100vw - 64px, 420px);
+  padding-top: 8px;
+}
+
+.submit-button {
+  background: var(--dialog-accent);
+  color: #f7fbfd;
+}
+
+.submit-button:disabled {
+  background: #a8bac4;
+  color: #112227;
+}
+
+:host-context(.dark-mode) .submit-button:disabled {
+  background: #556b78;
+  color: #f2f5f7;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+@media (max-width: 599px) {
+  .boat-form {
+    min-width: auto;
+  }
+}
