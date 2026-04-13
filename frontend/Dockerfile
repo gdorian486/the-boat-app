@@ -14,7 +14,9 @@ FROM nginx:1.29.8-alpine
 WORKDIR /usr/share/nginx/html
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY --chmod=755 docker/nginx/docker-entrypoint.d/generate-app-config.sh /docker-entrypoint.d/generate-app-config.sh
+COPY docker/nginx/docker-entrypoint.d/generate-app-config.sh /docker-entrypoint.d/generate-app-config.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/generate-app-config.sh \
+    && chmod 755 /docker-entrypoint.d/generate-app-config.sh
 COPY public/app-config.template.json /usr/share/nginx/html/app-config.template.json
 COPY --from=build /app/dist/boat/browser/ /usr/share/nginx/html/
 

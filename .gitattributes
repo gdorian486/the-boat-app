@@ -1,0 +1,15 @@
+# Force LF line endings for shell scripts to avoid CRLF issues in Linux containers
+*.sh text eol=lf
+
+# Force LF for other text files that run in Linux
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+
+# Force CRLF for Windows-specific files
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
