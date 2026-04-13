@@ -27,10 +27,10 @@ Priorities:
 - OpenAPI (Swagger)
 
 ### Frontend
-- Angular (latest stable)
+- Angular 20
 - Angular Router
 - HTTP Client
-- Optional: Angular Material
+- Angular Material
 
 ### Infrastructure
 - Docker
@@ -64,27 +64,67 @@ Use a standard layered architecture:
 
 ## Frontend Architecture Guidelines
 
-Structure the Angular app with clear separation:
+The app is structured around two top-level folders inside `src/app/`:
 
-- pages → route-level components
-- features → feature-specific logic and screens
-- services → API communication
-- models → TypeScript interfaces
-- guards → route protection
-- interceptors → attach authentication tokens
-- ui → reusable presentational components following an atomic design approach when it adds clarity
+```
+app/
+├── core/                         # Cross-cutting concerns shared across the app
+│   ├── config/                   # Runtime configuration (injection token + loader)
+│   ├── guards/                   # auth.guard, no-auth.guard
+│   └── services/                 # App-wide services (e.g. ThemeService)
+├── features/                     # One folder per feature domain
+│   ├── auth/
+│   │   └── pages/login/          # LoginPageComponent
+│   ├── boats/
+│   │   ├── pages/dashboard/      # DashboardPageComponent + BoatsDashboardStore
+│   │   ├── components/           # Feature-scoped dialog components (form, details, delete)
+│   │   ├── models/               # TypeScript interfaces (boat.model.ts)
+│   │   ├── services/             # BoatsService (HTTP)
+│   │   ├── constants/            # API path constants
+│   │   └── utils/                # Pure utility functions (e.g. UUID helpers)
+│   └── not-found/                # NotFoundPageComponent
+└── app.routes.ts                 # Lazy-loaded routes using loadComponent
+```
+
+### Component model
+
+- All components are **standalone** (no NgModules) and use `ChangeDetectionStrategy.OnPush`
+- Routes are lazy-loaded via `loadComponent`
+- Route-level components (pages) orchestrate state and open dialogs; they do not own presentation logic
+- Feature-specific dialog components (create, edit, delete, details) live in `features/<name>/components/`
+- There is no shared `ui/` folder — components are feature-scoped and reused within their feature only
+
+### State management
+
+- Page-level state is managed by a **component-scoped store**: a plain `@Injectable()` class provided in the page component's `providers` array (e.g. `BoatsDashboardStore`)
+- Stores use Angular **signals** for reactive state (`signal`, `computed`) and RxJS for async operations
+- The store owns all data-fetching, pagination, filtering, and mutation logic for its page
+- Services (`BoatsService`) are stateless and only handle HTTP communication
+
+### Forms
+
+- Use **reactive forms** (`ReactiveFormsModule`, `FormBuilder`) for any form with validation or controlled submission
+- Dialog components encapsulate their own form and emit the result via `MatDialogRef.close()`
+
+### Authentication
+
+- Authentication is handled entirely by the `keycloak-angular` library
+- Token attachment to HTTP requests is managed by Keycloak's built-in interceptor — no custom interceptor needed
+- Route protection is handled by `auth.guard` and `no-auth.guard` in `core/guards/`
+
+### Runtime configuration
+
+- Environment-specific values (API URL, Keycloak settings) are injected at runtime via `RUNTIME_CONFIG` injection token
+- The config is loaded from a static JSON file served by nginx before the app bootstraps
+- Never use `environment.ts` files for values that differ between Docker environments
 
 ### Rules:
-- Use atomic design principles pragmatically inside the ui folder
-- Keep ui components reusable, dumb, and focused on presentation when possible
-- Do not force atomic design where it makes the structure harder to understand
-- Use template-driven forms or reactive forms depending on the complexity of the form
-- Prefer reactive forms for complex validation, dynamic controls, or advanced form state handling
-- Use simpler approaches for simple forms when appropriate
-- Handle loading, error, and empty states explicitly
-- Keep components simple and focused
-- Move API logic to services
-- Avoid duplicating logic across components
+- Keep page components focused on orchestration — delegate state to the store, presentation to child components
+- Keep dialog components self-contained: they own their form and close with a typed result
+- Move all HTTP logic into services; stores call services and update signals
+- Handle loading, error, and empty states explicitly using store signals
+- Avoid duplicating logic across components or stores
+- Do not introduce a shared `ui/` folder unless a component is genuinely reused across multiple features
 
 ---
 

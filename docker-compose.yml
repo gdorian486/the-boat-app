@@ -1,4 +1,21 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: boat-frontend
+    depends_on:
+      backend:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://localhost:8081}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-boat}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-boat-frontend}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "${FRONTEND_PORT:-4200}:8080"
+
   postgres:
     image: postgres:17-alpine
     container_name: boat-postgres
@@ -58,7 +75,7 @@ services:
       OAUTH2_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8081}/realms/boat
       OAUTH2_JWK_SET_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8081}/realms/boat/protocol/openid-connect/certs
       JWT_AUDIENCE: ${JWT_AUDIENCE:-boat-api}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:${FRONTEND_PORT:-4200}}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 
