@@ -4,17 +4,31 @@ import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 
 const THEME_STORAGE_KEY = 'app-theme';
+let mediaQueryListener: ((event: MediaQueryListEvent) => void) | undefined;
+let matches = false;
+
+function createService(): ThemeService {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [
+      ThemeService,
+      {
+        provide: DOCUMENT,
+        useValue: document
+      }
+    ]
+  });
+
+  return TestBed.inject(ThemeService);
+}
 
 describe('ThemeService', () => {
-  let mediaQueryListener: ((event: MediaQueryListEvent) => void) | undefined;
-  let matches = false;
-
   beforeEach(() => {
     mediaQueryListener = undefined;
     matches = false;
-    window.localStorage.clear();
+    globalThis.localStorage.clear();
 
-    spyOn(window, 'matchMedia').and.callFake(() =>
+    spyOn(globalThis, 'matchMedia').and.callFake(() =>
       ({
         matches,
         media: '(prefers-color-scheme: dark)',
@@ -32,26 +46,11 @@ describe('ThemeService', () => {
 
   afterEach(() => {
     document.documentElement.classList.remove('dark-mode');
-    window.localStorage.clear();
+    globalThis.localStorage.clear();
   });
 
-  function createService(): ThemeService {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      providers: [
-        ThemeService,
-        {
-          provide: DOCUMENT,
-          useValue: document
-        }
-      ]
-    });
-
-    return TestBed.inject(ThemeService);
-  }
-
   it('uses the stored theme when available', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    globalThis.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
 
     const service = createService();
     TestBed.flushEffects();
@@ -78,7 +77,7 @@ describe('ThemeService', () => {
     TestBed.flushEffects();
 
     expect(service.theme()).toBe('dark');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(globalThis.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
     expect(document.documentElement.classList.contains('dark-mode')).toBeTrue();
   });
 
@@ -93,7 +92,7 @@ describe('ThemeService', () => {
   });
 
   it('ignores OS theme changes when a stored theme exists', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    globalThis.localStorage.setItem(THEME_STORAGE_KEY, 'light');
     const service = createService();
     TestBed.flushEffects();
 

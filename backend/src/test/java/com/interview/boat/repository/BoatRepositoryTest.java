@@ -25,7 +25,7 @@ class BoatRepositoryTest {
         Boat boat = new Boat();
         boat.setName("Aurora");
         boat.setDescription("Long-range cruiser");
-        boat.setCreatedBy("alice");
+        boat.setCreatedBy(UUID.fromString("22222222-2222-2222-2222-222222222222"));
 
         Boat savedBoat = boatRepository.saveAndFlush(boat);
 

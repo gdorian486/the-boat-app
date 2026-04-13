@@ -26,8 +26,8 @@ public class Boat {
     @Column(length = 5000)
     private String description;
 
-    @Column(nullable = false, length = 256)
-    private String createdBy;
+    @Column(nullable = false)
+    private UUID createdBy;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

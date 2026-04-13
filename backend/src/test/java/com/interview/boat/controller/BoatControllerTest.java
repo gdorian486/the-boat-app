@@ -47,7 +47,10 @@ class BoatControllerTest {
     private static final String MESSAGE_PATH = "$.message";
     private static final String PATH_PATH = "$.path";
     private static final String NAME_PATH = "$.name";
-    private static final String CAPTAIN = "captain";
+    private static final UUID CAPTAIN = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID ALICE = UUID.fromString("22222222-2222-2222-2222-222222222222");
+    private static final UUID BOB = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final UUID OWNER = UUID.fromString("44444444-4444-4444-4444-444444444444");
     private static final String ODYSSEY = "Odyssey";
     private static final String OCEAN_CAPABLE = "Ocean capable";
     private static final String NEW_NAME = "New Name";
@@ -68,7 +71,7 @@ class BoatControllerTest {
                 UUID.randomUUID(),
                 "Aurora",
                 "Long-range cruiser",
-                "alice",
+                ALICE,
                 Instant.parse("2026-04-11T10:00:00Z")
         );
         PageRequest expectedPageRequest = PageRequest.of(1, 5, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -134,7 +137,7 @@ class BoatControllerTest {
                 boatId,
                 "Skylark",
                 "Day sailer",
-                "bob",
+                BOB,
                 Instant.parse("2026-04-09T12:00:00Z")
         );
 
@@ -145,7 +148,7 @@ class BoatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(boatId.toString()))
                 .andExpect(jsonPath(NAME_PATH).value("Skylark"))
-                .andExpect(jsonPath("$.createdBy").value("bob"));
+                .andExpect(jsonPath("$.createdBy").value(BOB.toString()));
     }
 
     @Test
@@ -173,7 +176,7 @@ class BoatControllerTest {
         );
         Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "none")
-                .subject(CAPTAIN)
+                .subject(CAPTAIN.toString())
                 .build();
 
         when(boatService.create(request, CAPTAIN)).thenReturn(response);
@@ -184,7 +187,7 @@ class BoatControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath(NAME_PATH).value(ODYSSEY))
-                .andExpect(jsonPath("$.createdBy").value(CAPTAIN));
+                .andExpect(jsonPath("$.createdBy").value(CAPTAIN.toString()));
 
         verify(boatService).create(request, CAPTAIN);
     }
@@ -261,7 +264,7 @@ class BoatControllerTest {
                 boatId,
                 NEW_NAME,
                 UPDATED_DESCRIPTION,
-                "owner",
+                OWNER,
                 Instant.parse("2026-04-01T10:30:00Z")
         );
 
