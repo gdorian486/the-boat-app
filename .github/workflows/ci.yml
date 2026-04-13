@@ -68,7 +68,7 @@ jobs:
 
       - name: Test (headless)
         working-directory: frontend
-        run: pnpm test -- --watch=false --browsers=ChromeHeadless
+        run: pnpm test --watch=false --browsers=ChromeHeadless
 
   # ─── Docker images ──────────────────────────────────────────────────────────
   docker-build:
