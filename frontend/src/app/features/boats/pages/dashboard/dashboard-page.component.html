@@ -2,18 +2,105 @@
   <mat-toolbar class="dashboard-toolbar">
     <span>Boat Console</span>
     <span class="toolbar-spacer"></span>
+    <span class="toolbar-user">Signed in as {{ username }}</span>
     <button mat-button type="button" (click)="logout()">Logout</button>
   </mat-toolbar>
 
   <main class="dashboard-content">
     <mat-card class="dashboard-card" appearance="outlined">
       <mat-card-header>
-        <p class="card-label">Authenticated Area</p>
+        <div>
+          <p class="card-label">Fleet Dashboard</p>
+          <h1>All boats</h1>
+          <p class="card-subtitle">
+            {{ totalElements() }} boat{{ totalElements() === 1 ? '' : 's' }} available
+          </p>
+        </div>
       </mat-card-header>
+
       <mat-card-content>
-        <h1>Welcome back, {{ username }}.</h1>
-        <p>Authentication is active.</p>
+        @if (errorMessage()) {
+          <div class="feedback-panel" role="alert">
+            <p>{{ errorMessage() }}</p>
+            <button mat-stroked-button type="button" (click)="retry()">Retry</button>
+          </div>
+        } @else {
+          <div class="table-shell" [class.is-loading]="isLoading()">
+            @if (isLoading()) {
+              <div class="loading-state" aria-live="polite">
+                <mat-spinner diameter="44"></mat-spinner>
+                <p>Loading boats...</p>
+              </div>
+            }
+
+            <div class="table-wrapper">
+              <table
+                mat-table
+                [dataSource]="boats()"
+                class="boats-table"
+                [trackBy]="trackBoat"
+                aria-label="Boats list"
+              >
+                <ng-container matColumnDef="id">
+                  <th mat-header-cell *matHeaderCellDef>ID</th>
+                  <td mat-cell *matCellDef="let boat">
+                    <span class="cell-truncate id-cell" [title]="boat.id">{{ boat.id }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="name">
+                  <th mat-header-cell *matHeaderCellDef>Name</th>
+                  <td mat-cell *matCellDef="let boat">
+                    <span class="cell-truncate name-cell" [title]="boat.name">{{ boat.name }}</span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="description">
+                  <th mat-header-cell *matHeaderCellDef>Description</th>
+                  <td mat-cell *matCellDef="let boat">
+                    <span
+                      class="cell-truncate description-cell"
+                      [title]="boat.description || 'No description'"
+                    >
+                      {{ boat.description || 'No description' }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="createdAt">
+                  <th mat-header-cell *matHeaderCellDef>Created at</th>
+                  <td mat-cell *matCellDef="let boat">{{ boat.createdAt | date: 'medium' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let _row; columns: displayedColumns"></tr>
+              </table>
+
+              @if (!isLoading() && boats().length === 0) {
+                <div class="empty-state">
+                  <p>No boats found for this page.</p>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </mat-card-content>
+
+      <mat-card-actions align="end">
+        <mat-paginator
+          [length]="totalElements()"
+          [pageIndex]="currentPage()"
+          [pageSize]="currentPageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          showFirstLastButtons
+          aria-label="Boats pagination"
+          (page)="onPageChange($event)"
+        ></mat-paginator>
+      </mat-card-actions>
     </mat-card>
   </main>
+
+  <button mat-stroked-button class="theme-toggle" type="button" (click)="toggleTheme()">
+    {{ theme() === 'dark' ? 'Light mode' : 'Dark mode' }}
+  </button>
 </div>

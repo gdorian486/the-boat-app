@@ -4,8 +4,8 @@ import { DOCUMENT } from '@angular/common';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly document = inject(DOCUMENT);
-  private readonly storageKey = 'login-theme';
-  private readonly mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  private readonly storageKey = 'app-theme';
+  private readonly mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
 
   readonly theme = signal<'light' | 'dark'>(this.getInitialTheme());
 
@@ -17,7 +17,7 @@ export class ThemeService {
 
     // Keep in sync with OS preference when no stored value
     this.mediaQuery.addEventListener('change', (event) => {
-      if (!window.localStorage.getItem(this.storageKey)) {
+      if (!globalThis.localStorage.getItem(this.storageKey)) {
         this.theme.set(event.matches ? 'dark' : 'light');
       }
     });
@@ -26,13 +26,12 @@ export class ThemeService {
   toggleTheme(): void {
     const next = this.theme() === 'dark' ? 'light' : 'dark';
     this.theme.set(next);
-    window.localStorage.setItem(this.storageKey, next);
+    globalThis.localStorage.setItem(this.storageKey, next);
   }
 
   private getInitialTheme(): 'light' | 'dark' {
-    const stored = window.localStorage.getItem(this.storageKey);
+    const stored = globalThis.localStorage.getItem(this.storageKey);
     if (stored === 'light' || stored === 'dark') return stored;
     return this.mediaQuery.matches ? 'dark' : 'light';
   }
 }
-

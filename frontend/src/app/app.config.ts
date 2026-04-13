@@ -10,6 +10,7 @@ import {
 
 import { routes } from './app.routes';
 import { RuntimeConfig } from './core/config/runtime-config';
+import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
 
 export function createAppConfig(runtimeConfig: RuntimeConfig): ApplicationConfig {
   const apiUrlCondition: IncludeBearerTokenCondition = {
@@ -35,6 +36,10 @@ export function createAppConfig(runtimeConfig: RuntimeConfig): ApplicationConfig
       {
         provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
         useValue: [apiUrlCondition]
+      },
+      {
+        provide: RUNTIME_CONFIG,
+        useValue: runtimeConfig
       },
       provideHttpClient(withFetch(), withInterceptors([includeBearerTokenInterceptor])),
       provideRouter(routes)

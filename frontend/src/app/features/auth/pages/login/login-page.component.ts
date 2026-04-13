@@ -22,20 +22,21 @@ export class LoginPageComponent {
   protected readonly themeService = inject(ThemeService);
   protected readonly isLoading = signal(false);
 
-  protected login(): void {
+  protected async login(): Promise<void> {
     this.isLoading.set(true);
     const redirectUri = `${globalThis.location.origin}${this.router.serializeUrl(
       this.router.createUrlTree([APP_PATHS.BOATS])
     )}`;
-    void this.keycloak
-      .login({ redirectUri })
-      .catch(() => {
-        this.snackBar.open(
-          'Unable to connect to the authentication server. Please try again.',
-          'Close',
-          { duration: 5000 }
-        );
-      })
-      .finally(() => this.isLoading.set(false));
+    try {
+      await this.keycloak.login({ redirectUri });
+    } catch {
+      this.snackBar.open(
+        'Unable to connect to the authentication server. Please try again.',
+        'Close',
+        { duration: 5000 }
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 }
