@@ -6,6 +6,14 @@ import { RUNTIME_CONFIG } from '../../../core/config/runtime-config.token';
 import { Boat, BoatMutationPayload, PagedResponse, UUID } from '../models/boat.model';
 import { BoatsService } from './boats.service';
 
+interface RawBoatResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
 const MOCK_RUNTIME_CONFIG = {
   keycloakUrl: 'http://localhost:8081',
   keycloakRealm: 'boat',
@@ -13,11 +21,52 @@ const MOCK_RUNTIME_CONFIG = {
   apiBaseUrl: 'http://localhost:8080'
 };
 
+const BOAT_ID = '123e4567-e89b-12d3-a456-426614174000' as UUID;
+const CREATOR_ID = '123e4567-e89b-12d3-a456-426614174001' as UUID;
+const BOAT_URL = 'http://localhost:8080/api/boats';
+const DEFAULT_RAW_BOAT: RawBoatResponse = {
+  id: BOAT_ID,
+  name: 'Titanic',
+  description: null,
+  createdBy: CREATOR_ID,
+  createdAt: '2024-01-15T10:30:00Z'
+};
+
+function createPagedResponse(overrides: Partial<PagedResponse<unknown>> = {}) {
+  return {
+    content: [],
+    page: 0,
+    size: 10,
+    totalElements: 1,
+    totalPages: 1,
+    numberOfElements: 1,
+    first: true,
+    last: true,
+    empty: false,
+    ...overrides
+  };
+}
+
+function createRawBoat(overrides: Partial<RawBoatResponse> = {}): RawBoatResponse {
+  return {
+    ...DEFAULT_RAW_BOAT,
+    ...overrides
+  };
+}
+
+function expectBoatsGet(httpTestingController: HttpTestingController, page: number, size: number) {
+  return httpTestingController.expectOne(
+    (req) =>
+      req.method === 'GET' &&
+      req.url === BOAT_URL &&
+      req.params.get('page') === `${page}` &&
+      req.params.get('size') === `${size}`
+  );
+}
+
 describe('BoatsService', () => {
   let service: BoatsService;
   let httpTestingController: HttpTestingController;
-  const boatId = '123e4567-e89b-12d3-a456-426614174000' as UUID;
-  const creatorId = '123e4567-e89b-12d3-a456-426614174001' as UUID;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -41,18 +90,11 @@ describe('BoatsService', () => {
     it('sends a GET request to the boats endpoint with the correct page and size params', () => {
       service.getBoats(2, 50).subscribe();
 
-      const request = httpTestingController.expectOne(
-        (req) =>
-          req.method === 'GET' &&
-          req.url === 'http://localhost:8080/api/boats' &&
-          req.params.get('page') === '2' &&
-          req.params.get('size') === '50'
-      );
+      const request = expectBoatsGet(httpTestingController, 2, 50);
 
       expect(request.request.method).toBe('GET');
 
-      request.flush({
-        content: [],
+      request.flush(createPagedResponse({
         page: 2,
         size: 50,
         totalElements: 100,
@@ -61,31 +103,17 @@ describe('BoatsService', () => {
         first: false,
         last: true,
         empty: true
-      });
+      }));
     });
 
     it('maps createdAt ISO string to a Date object', () => {
       let result: PagedResponse<Boat> | undefined;
 
-      service.getBoats(0, 10).subscribe(r => (result = r));
+      service.getBoats(0, 10).subscribe((r) => (result = r));
 
-      httpTestingController.expectOne(() => true).flush({
-        content: [{
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          name: 'Titanic',
-          description: null,
-          createdBy: '123e4567-e89b-12d3-a456-426614174001',
-          createdAt: '2024-01-15T10:30:00Z'
-        }],
-        page: 0,
-        size: 10,
-        totalElements: 1,
-        totalPages: 1,
-        numberOfElements: 1,
-        first: true,
-        last: true,
-        empty: false
-      });
+      expectBoatsGet(httpTestingController, 0, 10).flush(createPagedResponse({
+        content: [createRawBoat()]
+      }));
 
       const boat = result!.content[0];
       expect(boat.createdAt).toBeInstanceOf(Date);
@@ -97,20 +125,11 @@ describe('BoatsService', () => {
     it('preserves null description', () => {
       let result: PagedResponse<Boat> | undefined;
 
-      service.getBoats(0, 10).subscribe(r => (result = r));
+      service.getBoats(0, 10).subscribe((r) => (result = r));
 
-      httpTestingController.expectOne(() => true).flush({
-        content: [{
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          name: 'Titanic',
-          description: null,
-          createdBy: '123e4567-e89b-12d3-a456-426614174001',
-          createdAt: '2024-01-15T10:30:00Z'
-        }],
-        page: 0, size: 10, totalElements: 1,
-        totalPages: 1, numberOfElements: 1,
-        first: true, last: true, empty: false
-      });
+      expectBoatsGet(httpTestingController, 0, 10).flush(createPagedResponse({
+        content: [createRawBoat()]
+      }));
 
       expect(result!.content[0].description).toBeNull();
     });
@@ -118,20 +137,11 @@ describe('BoatsService', () => {
     it('throws an error when the API returns a non-UUID id', () => {
       let error: unknown;
 
-      service.getBoats(0, 10).subscribe({ error: e => (error = e) });
+      service.getBoats(0, 10).subscribe({ error: (e) => (error = e) });
 
-      httpTestingController.expectOne(() => true).flush({
-        content: [{
-          id: 'not-a-uuid',
-          name: 'Ghost Ship',
-          description: null,
-          createdBy: '123e4567-e89b-12d3-a456-426614174001',
-          createdAt: '2024-01-15T10:30:00Z'
-        }],
-        page: 0, size: 10, totalElements: 1,
-        totalPages: 1, numberOfElements: 1,
-        first: true, last: true, empty: false
-      });
+      expectBoatsGet(httpTestingController, 0, 10).flush(createPagedResponse({
+        content: [createRawBoat({ id: 'not-a-uuid', name: 'Ghost Ship' })]
+      }));
 
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain('not-a-uuid');
@@ -140,20 +150,11 @@ describe('BoatsService', () => {
     it('throws an error when the API returns a malformed date', () => {
       let error: unknown;
 
-      service.getBoats(0, 10).subscribe({ error: e => (error = e) });
+      service.getBoats(0, 10).subscribe({ error: (e) => (error = e) });
 
-      httpTestingController.expectOne(() => true).flush({
-        content: [{
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          name: 'Ghost Ship',
-          description: null,
-          createdBy: '123e4567-e89b-12d3-a456-426614174001',
-          createdAt: 'not-a-date'
-        }],
-        page: 0, size: 10, totalElements: 1,
-        totalPages: 1, numberOfElements: 1,
-        first: true, last: true, empty: false
-      });
+      expectBoatsGet(httpTestingController, 0, 10).flush(createPagedResponse({
+        content: [createRawBoat({ name: 'Ghost Ship', createdAt: 'not-a-date' })]
+      }));
 
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain('not-a-date');
@@ -162,9 +163,9 @@ describe('BoatsService', () => {
     it('propagates HTTP errors', () => {
       let error: unknown;
 
-      service.getBoats(0, 10).subscribe({ error: e => (error = e) });
+      service.getBoats(0, 10).subscribe({ error: (e) => (error = e) });
 
-      httpTestingController.expectOne(() => true).flush(
+      expectBoatsGet(httpTestingController, 0, 10).flush(
         'Server error',
         { status: 500, statusText: 'Internal Server Error' }
       );
@@ -182,17 +183,14 @@ describe('BoatsService', () => {
 
       service.createBoat(payload).subscribe();
 
-      const request = httpTestingController.expectOne('http://localhost:8080/api/boats');
+      const request = httpTestingController.expectOne(BOAT_URL);
       expect(request.request.method).toBe('POST');
       expect(request.request.body).toEqual(payload);
 
-      request.flush({
-        id: boatId,
+      request.flush(createRawBoat({
         name: payload.name,
-        description: payload.description,
-        createdBy: creatorId,
-        createdAt: '2024-01-15T10:30:00Z'
-      });
+        description: payload.description
+      }));
     });
 
     it('maps the created boat response', () => {
@@ -200,20 +198,16 @@ describe('BoatsService', () => {
 
       service.createBoat({ name: 'Aurora', description: null }).subscribe((boat) => (result = boat));
 
-      httpTestingController.expectOne('http://localhost:8080/api/boats').flush({
-        id: boatId,
-        name: 'Aurora',
-        description: null,
-        createdBy: creatorId,
-        createdAt: '2024-01-15T10:30:00Z'
-      });
+      httpTestingController.expectOne(BOAT_URL).flush(createRawBoat({
+        name: 'Aurora'
+      }));
 
       expect(result).toEqual(
         jasmine.objectContaining({
-          id: boatId,
+          id: BOAT_ID,
           name: 'Aurora',
           description: null,
-          createdBy: creatorId
+          createdBy: CREATOR_ID
         })
       );
       expect(result?.createdAt).toBeInstanceOf(Date);
@@ -222,10 +216,10 @@ describe('BoatsService', () => {
     it('propagates HTTP errors', () => {
       let error: unknown;
 
-      service.createBoat({ name: 'Aurora', description: null }).subscribe({ error: e => (error = e) });
+      service.createBoat({ name: 'Aurora', description: null }).subscribe({ error: (e) => (error = e) });
 
       httpTestingController
-        .expectOne('http://localhost:8080/api/boats')
+        .expectOne(BOAT_URL)
         .flush('Server error', { status: 500, statusText: 'Internal Server Error' });
 
       expect(error).toBeTruthy();
@@ -239,41 +233,38 @@ describe('BoatsService', () => {
         description: 'Refit complete'
       };
 
-      service.updateBoat(boatId, payload).subscribe();
+      service.updateBoat(BOAT_ID, payload).subscribe();
 
-      const request = httpTestingController.expectOne(`http://localhost:8080/api/boats/${boatId}`);
+      const request = httpTestingController.expectOne(`http://localhost:8080/api/boats/${BOAT_ID}`);
       expect(request.request.method).toBe('PUT');
       expect(request.request.body).toEqual(payload);
 
-      request.flush({
-        id: boatId,
+      request.flush(createRawBoat({
         name: payload.name,
-        description: payload.description,
-        createdBy: creatorId,
-        createdAt: '2024-01-15T10:30:00Z'
-      });
+        description: payload.description
+      }));
     });
 
     it('maps the updated boat response', () => {
       let result: Boat | undefined;
       const payload: BoatMutationPayload = { name: 'Aurora II', description: 'Refit complete' };
 
-      service.updateBoat(boatId, payload).subscribe((boat) => (result = boat));
+      service.updateBoat(BOAT_ID, payload).subscribe((boat) => (result = boat));
 
-      httpTestingController.expectOne(`http://localhost:8080/api/boats/${boatId}`).flush({
-        id: boatId,
-        name: payload.name,
-        description: payload.description,
-        createdBy: creatorId,
-        createdAt: '2024-06-01T08:00:00Z'
-      });
+      httpTestingController.expectOne(`http://localhost:8080/api/boats/${BOAT_ID}`).flush(
+        createRawBoat({
+          name: payload.name,
+          description: payload.description,
+          createdAt: '2024-06-01T08:00:00Z'
+        })
+      );
 
       expect(result).toEqual(
         jasmine.objectContaining({
-          id: boatId,
+          id: BOAT_ID,
           name: 'Aurora II',
           description: 'Refit complete',
-          createdBy: creatorId
+          createdBy: CREATOR_ID
         })
       );
       expect(result?.createdAt).toBeInstanceOf(Date);
@@ -282,10 +273,10 @@ describe('BoatsService', () => {
     it('propagates HTTP errors', () => {
       let error: unknown;
 
-      service.updateBoat(boatId, { name: 'X', description: null }).subscribe({ error: e => (error = e) });
+      service.updateBoat(BOAT_ID, { name: 'X', description: null }).subscribe({ error: (e) => (error = e) });
 
       httpTestingController
-        .expectOne(`http://localhost:8080/api/boats/${boatId}`)
+        .expectOne(`http://localhost:8080/api/boats/${BOAT_ID}`)
         .flush('Not found', { status: 404, statusText: 'Not Found' });
 
       expect(error).toBeTruthy();
@@ -294,9 +285,9 @@ describe('BoatsService', () => {
 
   describe('deleteBoat', () => {
     it('sends a DELETE request to the boat resource', () => {
-      service.deleteBoat(boatId).subscribe();
+      service.deleteBoat(BOAT_ID).subscribe();
 
-      const request = httpTestingController.expectOne(`http://localhost:8080/api/boats/${boatId}`);
+      const request = httpTestingController.expectOne(`http://localhost:8080/api/boats/${BOAT_ID}`);
       expect(request.request.method).toBe('DELETE');
       request.flush(null);
     });
@@ -304,10 +295,10 @@ describe('BoatsService', () => {
     it('propagates HTTP errors', () => {
       let error: unknown;
 
-      service.deleteBoat(boatId).subscribe({ error: e => (error = e) });
+      service.deleteBoat(BOAT_ID).subscribe({ error: (e) => (error = e) });
 
       httpTestingController
-        .expectOne(`http://localhost:8080/api/boats/${boatId}`)
+        .expectOne(`http://localhost:8080/api/boats/${BOAT_ID}`)
         .flush('Not found', { status: 404, statusText: 'Not Found' });
 
       expect(error).toBeTruthy();

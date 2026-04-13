@@ -2,7 +2,6 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatPaginator } from '@angular/material/paginator';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import Keycloak from 'keycloak-js';
 
@@ -14,19 +13,39 @@ import { BoatFormDialogComponent } from '../../components/boat-form-dialog/boat-
 import { BoatsService } from '../../services/boats.service';
 import { DashboardPageComponent } from './dashboard-page.component';
 
+function createDashboardComponent() {
+  const fixture = TestBed.createComponent(DashboardPageComponent);
+  const component = fixture.componentInstance;
+  fixture.detectChanges();
+  return { fixture, component, element: fixture.nativeElement as HTMLElement };
+}
+
+function buildBoat(baseBoat: Boat, overrides: Partial<Boat> = {}): Boat {
+  return {
+    ...baseBoat,
+    ...overrides
+  };
+}
+
+function setSearchValue(element: HTMLElement, value: string): void {
+  const searchInput = element.querySelector<HTMLInputElement>('.search-field input');
+  searchInput!.value = value;
+  searchInput!.dispatchEvent(new Event('input'));
+}
+
 describe('DashboardPageComponent', () => {
-  const boats: Boat[] = [
-    {
-      id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' as UUID,
-      name: 'North Wind',
-      description: 'Long range expedition yacht',
-      createdBy: '7c9e6679-7425-40de-944b-e07fc1f90ae7' as UUID,
-      createdAt: new Date('2026-04-12T08:30:00Z')
-    }
-  ];
+  const defaultBoat: Boat = {
+    id: '3fa85f64-5717-4562-b3fc-2c963f66afa6' as UUID,
+    name: 'North Wind',
+    description: 'Long range expedition yacht',
+    createdBy: '7c9e6679-7425-40de-944b-e07fc1f90ae7' as UUID,
+    createdAt: new Date('2026-04-12T08:30:00Z')
+  };
+
+  const boats: Boat[] = [defaultBoat];
 
   const pagedResponse = {
-    content: boats,
+    content: [defaultBoat],
     page: 0,
     size: 10,
     totalElements: 1,
@@ -61,7 +80,6 @@ describe('DashboardPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
       providers: [
-        provideNoopAnimations(),
         {
           provide: BoatsService,
           useValue: {
@@ -100,19 +118,17 @@ describe('DashboardPageComponent', () => {
   }
 
   it('loads the first boats page on init', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
     expect(getBoatsSpy).toHaveBeenCalledWith(0, 10);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('North Wind');
+    expect(element.textContent).toContain('North Wind');
   });
 
   it('renders the configured dashboard columns without createdBy', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
     const headerCells = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('th.mat-mdc-header-cell')
+      element.querySelectorAll('th.mat-mdc-header-cell')
     ).map((cell) => cell.textContent?.trim());
 
     expect(headerCells).toEqual(['ID', 'Name', 'Description', 'Created at', 'Actions']);
@@ -120,26 +136,22 @@ describe('DashboardPageComponent', () => {
   });
 
   it('renders a centered search input above the table', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
-
-    const searchField = (fixture.nativeElement as HTMLElement).querySelector('.search-field input');
+    const { element } = createDashboardComponent();
+    const searchField = element.querySelector('.search-field input');
 
     expect(searchField).not.toBeNull();
     expect(searchField?.getAttribute('placeholder')).toBe('Search by name or description');
   });
 
   it('opens the details dialog when a table row is clicked', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component, element } = createDashboardComponent();
     const dialogOpenSpy = mockDialogOpen(component);
-    fixture.detectChanges();
 
-    const row = (fixture.nativeElement as HTMLElement).querySelector('tr.mat-mdc-row');
+    const row = element.querySelector('tr.mat-mdc-row');
     row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(dialogOpenSpy).toHaveBeenCalledWith(BoatDetailsDialogComponent, {
-      data: { boat: boats[0] },
+      data: { boat: defaultBoat },
       panelClass: ['boat-dialog'],
       width: '640px',
       maxWidth: 'calc(100vw - 32px)'
@@ -147,14 +159,10 @@ describe('DashboardPageComponent', () => {
   });
 
   it('does not open the details dialog when clicking the update action', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component, element } = createDashboardComponent();
     const dialogOpenSpy = mockDialogOpen(component);
-    fixture.detectChanges();
 
-    const updateButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      'button[aria-label="Update boat"]'
-    );
+    const updateButton = element.querySelector<HTMLButtonElement>('button[aria-label="Update boat"]');
     updateButton?.click();
 
     expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
@@ -162,8 +170,8 @@ describe('DashboardPageComponent', () => {
       data: {
         mode: 'update',
         boat: {
-          name: boats[0].name,
-          description: boats[0].description
+          name: defaultBoat.name,
+          description: defaultBoat.description
         }
       },
       panelClass: ['boat-dialog'],
@@ -173,44 +181,39 @@ describe('DashboardPageComponent', () => {
   });
 
   it('renders truncation wrappers with full values in title attributes', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
-
-    const element = fixture.nativeElement as HTMLElement;
+    const { element } = createDashboardComponent();
     const idCell = element.querySelector('.id-cell');
     const nameCell = element.querySelector('.name-cell');
     const descriptionCell = element.querySelector('.description-cell');
 
-    expect(idCell?.textContent?.trim()).toBe(boats[0].id);
-    expect(idCell?.getAttribute('title')).toBe(boats[0].id);
-    expect(nameCell?.textContent?.trim()).toBe(boats[0].name);
-    expect(nameCell?.getAttribute('title')).toBe(boats[0].name);
-    expect(descriptionCell?.textContent?.trim()).toBe(boats[0].description ?? undefined);
-    expect(descriptionCell?.getAttribute('title')).toBe(boats[0].description ?? undefined);
+    expect(idCell?.textContent?.trim()).toBe(defaultBoat.id);
+    expect(idCell?.getAttribute('title')).toBe(defaultBoat.id);
+    expect(nameCell?.textContent?.trim()).toBe(defaultBoat.name);
+    expect(nameCell?.getAttribute('title')).toBe(defaultBoat.name);
+    expect(descriptionCell?.textContent?.trim()).toBe(defaultBoat.description ?? undefined);
+    expect(descriptionCell?.getAttribute('title')).toBe(defaultBoat.description ?? undefined);
   });
 
   it('renders the fallback description with truncation metadata when description is missing', () => {
     getBoatsSpy.and.returnValue(
       of({
         ...pagedResponse,
-        content: [{ ...boats[0], description: '' }]
+        content: [buildBoat(defaultBoat, { description: '' })]
       })
     );
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    const descriptionCell = (fixture.nativeElement as HTMLElement).querySelector('.description-cell');
+    const descriptionCell = element.querySelector('.description-cell');
 
     expect(descriptionCell?.textContent?.trim()).toBe('No description');
     expect(descriptionCell?.getAttribute('title')).toBe('No description');
   });
 
   it('displays the username in the toolbar', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('dorian');
+    expect(element.textContent).toContain('dorian');
   });
 
   it('opens the create dialog and creates a boat when confirmed', () => {
@@ -219,10 +222,8 @@ describe('DashboardPageComponent', () => {
       description: 'Survey vessel'
     } satisfies BoatMutationPayload;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     const dialogOpenSpy = mockDialogOpen(component);
-    fixture.detectChanges();
     (component as any).openCreateDialog();
 
     expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
@@ -241,53 +242,47 @@ describe('DashboardPageComponent', () => {
       description: 'Updated description'
     } satisfies BoatMutationPayload;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     const dialogOpenSpy = mockDialogOpen(component);
-    fixture.detectChanges();
-    (component as any).openUpdateDialog(boats[0]);
+    (component as any).openUpdateDialog(defaultBoat);
 
     expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
       data: {
         mode: 'update',
         boat: {
-          name: boats[0].name,
-          description: boats[0].description
+          name: defaultBoat.name,
+          description: defaultBoat.description
         }
       },
       panelClass: ['boat-dialog'],
       width: '620px',
       maxWidth: 'calc(100vw - 32px)'
     });
-    expect(updateBoatSpy).toHaveBeenCalledWith(boats[0].id, dialogResult);
+    expect(updateBoatSpy).toHaveBeenCalledWith(defaultBoat.id, dialogResult);
     expect(getBoatsSpy).toHaveBeenCalledTimes(2);
   });
 
   it('opens the delete dialog and deletes a boat when confirmed', () => {
     dialogResult = true;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     const dialogOpenSpy = mockDialogOpen(component);
-    fixture.detectChanges();
-    (component as any).confirmDelete(boats[0]);
+    (component as any).confirmDelete(defaultBoat);
 
     expect(dialogOpenSpy).toHaveBeenCalledWith(BoatDeleteConfirmDialogComponent, {
-      data: { name: boats[0].name },
+      data: { name: defaultBoat.name },
       panelClass: ['boat-dialog']
     });
-    expect(deleteBoatSpy).toHaveBeenCalledWith(boats[0].id);
+    expect(deleteBoatSpy).toHaveBeenCalledWith(defaultBoat.id);
     expect(getBoatsSpy).toHaveBeenCalledTimes(2);
   });
 
   it('does not delete a boat when the confirmation dialog is cancelled', () => {
     dialogResult = false;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
-    fixture.detectChanges();
-    (component as any).confirmDelete(boats[0]);
+    (component as any).confirmDelete(defaultBoat);
 
     expect(deleteBoatSpy).not.toHaveBeenCalled();
   });
@@ -299,12 +294,10 @@ describe('DashboardPageComponent', () => {
     } satisfies BoatMutationPayload;
     updateBoatSpy.and.returnValue(throwError(() => new Error('boom')));
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
     const snackBarOpenSpy = mockSnackBarOpen(component);
-    fixture.detectChanges();
-    (component as any).openUpdateDialog(boats[0]);
+    (component as any).openUpdateDialog(defaultBoat);
 
     expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to update boat. Please try again.', 'Close', {
       duration: 5000,
@@ -316,12 +309,10 @@ describe('DashboardPageComponent', () => {
     dialogResult = true;
     deleteBoatSpy.and.returnValue(throwError(() => new Error('boom')));
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
     const snackBarOpenSpy = mockSnackBarOpen(component);
-    fixture.detectChanges();
-    (component as any).confirmDelete(boats[0]);
+    (component as any).confirmDelete(defaultBoat);
 
     expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to delete boat. Please try again.', 'Close', {
       duration: 5000,
@@ -332,10 +323,8 @@ describe('DashboardPageComponent', () => {
   it('navigates to the previous page after deleting the last boat on a non-first page', () => {
     dialogResult = true;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { fixture, component } = createDashboardComponent();
     mockDialogOpen(component);
-    fixture.detectChanges();
 
     // Simulate navigating to page 1 — currentPage becomes 1 via the tap
     const paginator = fixture.debugElement.query(By.directive(MatPaginator)).componentInstance as MatPaginator;
@@ -343,7 +332,7 @@ describe('DashboardPageComponent', () => {
     fixture.detectChanges();
 
     // boats() still contains the single boat from pagedResponse, currentPage() is now 1
-    (component as any).confirmDelete(boats[0]);
+    (component as any).confirmDelete(defaultBoat);
 
     // Should reload page 0 (page - 1) because boats.length === 1 && currentPage > 0
     const lastCall = getBoatsSpy.calls.mostRecent().args;
@@ -353,10 +342,8 @@ describe('DashboardPageComponent', () => {
   it('does not call the API when the create dialog is cancelled', () => {
     dialogResult = undefined;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
-    fixture.detectChanges();
     (component as any).openCreateDialog();
 
     expect(createBoatSpy).not.toHaveBeenCalled();
@@ -365,11 +352,9 @@ describe('DashboardPageComponent', () => {
   it('does not call the API when the update dialog is cancelled', () => {
     dialogResult = undefined;
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
-    fixture.detectChanges();
-    (component as any).openUpdateDialog(boats[0]);
+    (component as any).openUpdateDialog(defaultBoat);
 
     expect(updateBoatSpy).not.toHaveBeenCalled();
   });
@@ -377,10 +362,9 @@ describe('DashboardPageComponent', () => {
   it('hides the paginator when an error occurs', () => {
     getBoatsSpy.and.returnValue(throwError(() => new Error('boom')));
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    const paginator = (fixture.nativeElement as HTMLElement).querySelector('mat-paginator');
+    const paginator = element.querySelector('mat-paginator');
     expect(paginator).toBeNull();
   });
 
@@ -391,11 +375,9 @@ describe('DashboardPageComponent', () => {
     } satisfies BoatMutationPayload;
     createBoatSpy.and.returnValue(throwError(() => new Error('boom')));
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    const component = fixture.componentInstance;
+    const { component } = createDashboardComponent();
     mockDialogOpen(component);
     const snackBarOpenSpy = mockSnackBarOpen(component);
-    fixture.detectChanges();
     (component as any).openCreateDialog();
 
     expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to create boat. Please try again.', 'Close', {
@@ -405,8 +387,7 @@ describe('DashboardPageComponent', () => {
   });
 
   it('requests a new page when the paginator changes', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { fixture } = createDashboardComponent();
 
     const paginator = fixture.debugElement.query(By.directive(MatPaginator)).componentInstance as MatPaginator;
     paginator.page.emit({ pageIndex: 1, pageSize: 20, length: 1, previousPageIndex: 0 });
@@ -418,28 +399,22 @@ describe('DashboardPageComponent', () => {
   it('renders an error state when loading boats fails', () => {
     getBoatsSpy.and.returnValue(throwError(() => new Error('boom')));
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Unable to load boats. Please try again.'
-    );
+    expect(element.textContent).toContain('Unable to load boats. Please try again.');
   });
 
   it('retries the current page when the retry button is clicked', () => {
     getBoatsSpy.and.returnValue(throwError(() => new Error('boom')));
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { fixture, element } = createDashboardComponent();
 
     getBoatsSpy.and.returnValue(of(pagedResponse));
-    const retryButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.feedback-panel button'
-    );
+    const retryButton = element.querySelector<HTMLButtonElement>('.feedback-panel button');
     retryButton?.click();
     fixture.detectChanges();
 
     expect(getBoatsSpy).toHaveBeenCalledTimes(2);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('North Wind');
+    expect(element.textContent).toContain('North Wind');
   });
 
   it('renders the empty state when no boats are returned', () => {
@@ -447,88 +422,71 @@ describe('DashboardPageComponent', () => {
       of({ ...pagedResponse, content: [], totalElements: 0, numberOfElements: 0, empty: true })
     );
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No boats found');
+    expect(element.textContent).toContain('No boats found');
   });
 
   it('filters boats by name', () => {
+    const secondaryBoat = buildBoat(defaultBoat, {
+      id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
+      name: 'Sea Mist',
+      description: 'Harbor shuttle'
+    });
+
     getBoatsSpy.and.returnValue(
       of({
         ...pagedResponse,
-        content: [
-          boats[0],
-          {
-            ...boats[0],
-            id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
-            name: 'Sea Mist',
-            description: 'Harbor shuttle'
-          }
-        ],
+        content: [defaultBoat, secondaryBoat],
         totalElements: 2,
         numberOfElements: 2
       })
     );
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const { fixture, element } = createDashboardComponent();
+    setSearchValue(element, 'north');
     fixture.detectChanges();
 
-    const searchInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.search-field input');
-    searchInput!.value = 'north';
-    searchInput!.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    const content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const content = element.textContent ?? '';
     expect(content).toContain('North Wind');
     expect(content).not.toContain('Sea Mist');
   });
 
   it('filters boats by description and shows a search empty state when nothing matches', () => {
+    const secondaryBoat = buildBoat(defaultBoat, {
+      id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
+      name: 'Sea Mist',
+      description: 'Harbor shuttle'
+    });
+
     getBoatsSpy.and.returnValue(
       of({
         ...pagedResponse,
-        content: [
-          boats[0],
-          {
-            ...boats[0],
-            id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
-            name: 'Sea Mist',
-            description: 'Harbor shuttle'
-          }
-        ],
+        content: [defaultBoat, secondaryBoat],
         totalElements: 2,
         numberOfElements: 2
       })
     );
 
-    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const { fixture, element } = createDashboardComponent();
+    setSearchValue(element, 'shuttle');
     fixture.detectChanges();
 
-    const searchInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.search-field input');
-    searchInput!.value = 'shuttle';
-    searchInput!.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    let content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    let content = element.textContent ?? '';
     expect(content).toContain('Sea Mist');
     expect(content).not.toContain('North Wind');
 
-    searchInput!.value = 'zzz';
-    searchInput!.dispatchEvent(new Event('input'));
+    setSearchValue(element, 'zzz');
     fixture.detectChanges();
 
-    content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    content = element.textContent ?? '';
     expect(content).toContain('No boats match your search.');
   });
 
   it('calls keycloak.logout with the login redirect URI', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    const logoutButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      'mat-toolbar button'
-    );
+    const logoutButton = element.querySelector<HTMLButtonElement>('mat-toolbar button');
     logoutButton?.click();
 
     expect(logoutSpy).toHaveBeenCalledWith(
@@ -537,12 +495,9 @@ describe('DashboardPageComponent', () => {
   });
 
   it('toggles the theme when the theme button is clicked', () => {
-    const fixture = TestBed.createComponent(DashboardPageComponent);
-    fixture.detectChanges();
+    const { element } = createDashboardComponent();
 
-    const themeButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.theme-toggle'
-    );
+    const themeButton = element.querySelector<HTMLButtonElement>('.theme-toggle');
     themeButton?.click();
 
     expect(toggleThemeSpy).toHaveBeenCalledTimes(1);
@@ -550,7 +505,7 @@ describe('DashboardPageComponent', () => {
 
   it('returns boat.id from trackBoat', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
-    const result = (fixture.componentInstance as any).trackBoat(0, boats[0]);
-    expect(result).toBe(boats[0].id);
+    const result = (fixture.componentInstance as any).trackBoat(0, defaultBoat);
+    expect(result).toBe(defaultBoat.id);
   });
 });
