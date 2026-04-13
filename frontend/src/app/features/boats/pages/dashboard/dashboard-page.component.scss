@@ -97,6 +97,14 @@
   text-transform: uppercase;
 }
 
+.card-header-content {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .dashboard-card h1 {
   margin: 0;
   font-size: clamp(2rem, 4vw, 3rem);
@@ -153,9 +161,9 @@
 }
 
 .boats-table td {
-  vertical-align: top;
+  vertical-align: middle;
   line-height: 1.5;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .boats-table .mat-column-id {
@@ -163,11 +171,20 @@
 }
 
 .boats-table .mat-column-name {
-  width: 20%;
+  width: 18%;
 }
 
 .boats-table .mat-column-description {
-  width: 32%;
+  width: 28%;
+}
+
+.boats-table .mat-column-createdAt {
+  width: 20%;
+}
+
+.boats-table .mat-column-actions {
+  width: 140px;
+  overflow: visible;
 }
 
 .cell-truncate {
@@ -175,6 +192,34 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.actions-cell {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.action-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.actions-cell button + button {
+  margin-left: 4px;
+}
+
+.actions-cell button {
+  color: var(--dp-text);
+}
+
+.create-button {
+  align-self: center;
 }
 
 .loading-state,
@@ -247,16 +292,34 @@ mat-paginator {
     padding: 12px;
   }
 
+  .card-header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .boats-table .mat-column-id {
     width: 24%;
   }
 
   .boats-table .mat-column-name {
-    width: 24%;
+    width: 22%;
   }
 
   .boats-table .mat-column-description {
-    width: 32%;
+    width: 26%;
+  }
+
+  .boats-table .mat-column-createdAt {
+    width: 20%;
+  }
+
+  .boats-table .mat-column-actions {
+    width: 120px;
   }
 
   .theme-toggle {

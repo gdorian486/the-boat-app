@@ -8,6 +8,11 @@ export interface Boat {
   createdAt: Date;
 }
 
+export interface BoatMutationPayload {
+  name: string;
+  description: string | null;
+}
+
 export interface PagedResponse<T> {
   content: T[];
   page: number;

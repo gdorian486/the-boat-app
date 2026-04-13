@@ -1,0 +1,14 @@
+:host {
+  --dialog-muted: #5f7282;
+  display: block;
+}
+
+:host-context(.dark-mode) {
+  --dialog-muted: #a8b3bb;
+}
+
+.dialog-copy {
+  margin: 8px 0 0;
+  color: var(--dialog-muted);
+}
+

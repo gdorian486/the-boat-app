@@ -2,11 +2,14 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatPaginator } from '@angular/material/paginator';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
 import Keycloak from 'keycloak-js';
 
 import { ThemeService } from '../../../../core/services/theme.service';
-import { Boat, UUID } from '../../models/boat.model';
+import { Boat, BoatMutationPayload, UUID } from '../../models/boat.model';
+import { BoatDeleteConfirmDialogComponent } from '../../components/boat-delete-confirm-dialog/boat-delete-confirm-dialog.component';
+import { BoatFormDialogComponent } from '../../components/boat-form-dialog/boat-form-dialog.component';
 import { BoatsService } from '../../services/boats.service';
 import { DashboardPageComponent } from './dashboard-page.component';
 
@@ -34,13 +37,21 @@ describe('DashboardPageComponent', () => {
   };
 
   let getBoatsSpy: jasmine.Spy;
+  let createBoatSpy: jasmine.Spy;
+  let updateBoatSpy: jasmine.Spy;
+  let deleteBoatSpy: jasmine.Spy;
   let logoutSpy: jasmine.Spy;
   let themeSignal: ReturnType<typeof signal<'light' | 'dark'>>;
   let toggleThemeSpy: jasmine.Spy;
+  let dialogResult: unknown;
 
   beforeEach(async () => {
     getBoatsSpy = jasmine.createSpy('getBoats').and.returnValue(of(pagedResponse));
+    createBoatSpy = jasmine.createSpy('createBoat').and.returnValue(of(boats[0]));
+    updateBoatSpy = jasmine.createSpy('updateBoat').and.returnValue(of(boats[0]));
+    deleteBoatSpy = jasmine.createSpy('deleteBoat').and.returnValue(of(void 0));
     logoutSpy = jasmine.createSpy('logout').and.returnValue(Promise.resolve());
+    dialogResult = undefined;
     themeSignal = signal<'light' | 'dark'>('light');
     toggleThemeSpy = jasmine.createSpy('toggleTheme').and.callFake(() => {
       themeSignal.set(themeSignal() === 'dark' ? 'light' : 'dark');
@@ -49,9 +60,15 @@ describe('DashboardPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
       providers: [
+        provideNoopAnimations(),
         {
           provide: BoatsService,
-          useValue: { getBoats: getBoatsSpy }
+          useValue: {
+            getBoats: getBoatsSpy,
+            createBoat: createBoatSpy,
+            updateBoat: updateBoatSpy,
+            deleteBoat: deleteBoatSpy
+          }
         },
         {
           provide: Keycloak,
@@ -71,6 +88,16 @@ describe('DashboardPageComponent', () => {
     }).compileComponents();
   });
 
+  function mockDialogOpen(component: DashboardPageComponent): jasmine.Spy {
+    return spyOn((component as any).dialog, 'open').and.callFake(() => ({
+      afterClosed: () => of(dialogResult)
+    }) as never);
+  }
+
+  function mockSnackBarOpen(component: DashboardPageComponent): jasmine.Spy {
+    return spyOn((component as any).snackBar, 'open');
+  }
+
   it('loads the first boats page on init', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
@@ -87,7 +114,7 @@ describe('DashboardPageComponent', () => {
       (fixture.nativeElement as HTMLElement).querySelectorAll('th.mat-mdc-header-cell')
     ).map((cell) => cell.textContent?.trim());
 
-    expect(headerCells).toEqual(['ID', 'Name', 'Description', 'Created at']);
+    expect(headerCells).toEqual(['ID', 'Name', 'Description', 'Created at', 'Actions']);
     expect(headerCells).not.toContain('Created by');
   });
 
@@ -130,6 +157,193 @@ describe('DashboardPageComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('dorian');
+  });
+
+  it('opens the create dialog and creates a boat when confirmed', () => {
+    dialogResult = {
+      name: 'Aurora',
+      description: 'Survey vessel'
+    } satisfies BoatMutationPayload;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    const dialogOpenSpy = mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).openCreateDialog();
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
+      data: { mode: 'create' },
+      panelClass: ['boat-dialog']
+    });
+    expect(createBoatSpy).toHaveBeenCalledWith(dialogResult);
+    expect(getBoatsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the update dialog and updates a boat when confirmed', () => {
+    dialogResult = {
+      name: 'North Wind II',
+      description: 'Updated description'
+    } satisfies BoatMutationPayload;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    const dialogOpenSpy = mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).openUpdateDialog(boats[0]);
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
+      data: {
+        mode: 'update',
+        boat: {
+          name: boats[0].name,
+          description: boats[0].description
+        }
+      },
+      panelClass: ['boat-dialog']
+    });
+    expect(updateBoatSpy).toHaveBeenCalledWith(boats[0].id, dialogResult);
+    expect(getBoatsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the delete dialog and deletes a boat when confirmed', () => {
+    dialogResult = true;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    const dialogOpenSpy = mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).confirmDelete(boats[0]);
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(BoatDeleteConfirmDialogComponent, {
+      data: { name: boats[0].name },
+      panelClass: ['boat-dialog']
+    });
+    expect(deleteBoatSpy).toHaveBeenCalledWith(boats[0].id);
+    expect(getBoatsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not delete a boat when the confirmation dialog is cancelled', () => {
+    dialogResult = false;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).confirmDelete(boats[0]);
+
+    expect(deleteBoatSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows a red snackbar when update fails', () => {
+    dialogResult = {
+      name: 'North Wind II',
+      description: null
+    } satisfies BoatMutationPayload;
+    updateBoatSpy.and.returnValue(throwError(() => new Error('boom')));
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    const snackBarOpenSpy = mockSnackBarOpen(component);
+    fixture.detectChanges();
+    (component as any).openUpdateDialog(boats[0]);
+
+    expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to update boat. Please try again.', 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
+    });
+  });
+
+  it('shows a red snackbar when delete fails', () => {
+    dialogResult = true;
+    deleteBoatSpy.and.returnValue(throwError(() => new Error('boom')));
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    const snackBarOpenSpy = mockSnackBarOpen(component);
+    fixture.detectChanges();
+    (component as any).confirmDelete(boats[0]);
+
+    expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to delete boat. Please try again.', 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
+    });
+  });
+
+  it('navigates to the previous page after deleting the last boat on a non-first page', () => {
+    dialogResult = true;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    fixture.detectChanges();
+
+    // Simulate navigating to page 1 — currentPage becomes 1 via the tap
+    const paginator = fixture.debugElement.query(By.directive(MatPaginator)).componentInstance as MatPaginator;
+    paginator.page.emit({ pageIndex: 1, pageSize: 10, length: 11, previousPageIndex: 0 });
+    fixture.detectChanges();
+
+    // boats() still contains the single boat from pagedResponse, currentPage() is now 1
+    (component as any).confirmDelete(boats[0]);
+
+    // Should reload page 0 (page - 1) because boats.length === 1 && currentPage > 0
+    const lastCall = getBoatsSpy.calls.mostRecent().args;
+    expect(lastCall).toEqual([0, 10]);
+  });
+
+  it('does not call the API when the create dialog is cancelled', () => {
+    dialogResult = undefined;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).openCreateDialog();
+
+    expect(createBoatSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not call the API when the update dialog is cancelled', () => {
+    dialogResult = undefined;
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    fixture.detectChanges();
+    (component as any).openUpdateDialog(boats[0]);
+
+    expect(updateBoatSpy).not.toHaveBeenCalled();
+  });
+
+  it('hides the paginator when an error occurs', () => {
+    getBoatsSpy.and.returnValue(throwError(() => new Error('boom')));
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const paginator = (fixture.nativeElement as HTMLElement).querySelector('mat-paginator');
+    expect(paginator).toBeNull();
+  });
+
+  it('shows a red snackbar when create fails', () => {
+    dialogResult = {
+      name: 'Aurora',
+      description: null
+    } satisfies BoatMutationPayload;
+    createBoatSpy.and.returnValue(throwError(() => new Error('boom')));
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    mockDialogOpen(component);
+    const snackBarOpenSpy = mockSnackBarOpen(component);
+    fixture.detectChanges();
+    (component as any).openCreateDialog();
+
+    expect(snackBarOpenSpy).toHaveBeenCalledWith('Unable to create boat. Please try again.', 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
+    });
   });
 
   it('requests a new page when the paginator changes', () => {
