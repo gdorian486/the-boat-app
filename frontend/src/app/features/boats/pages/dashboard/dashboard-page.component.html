@@ -18,6 +18,18 @@
             </p>
           </div>
 
+          <div class="header-search">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Search boats</mat-label>
+              <input
+                matInput
+                [ngModel]="searchTerm()"
+                (ngModelChange)="onSearchTermChange($event)"
+                placeholder="Search by name or description"
+              />
+            </mat-form-field>
+          </div>
+
           <button mat-flat-button type="button" class="create-button" (click)="openCreateDialog()">
             Create boat
           </button>
@@ -42,7 +54,7 @@
             <div class="table-wrapper">
               <table
                 mat-table
-                [dataSource]="store.boats()"
+                [dataSource]="store.filteredBoats()"
                 class="boats-table"
                 [trackBy]="trackBoat"
                 aria-label="Boats list"
@@ -121,9 +133,9 @@
                 ></tr>
               </table>
 
-              @if (!store.isLoading() && store.boats().length === 0) {
+              @if (!store.isLoading() && store.filteredBoats().length === 0) {
                 <div class="empty-state">
-                  <p>No boats found for this page.</p>
+                  <p>{{ searchTerm().trim() ? 'No boats match your search.' : 'No boats found for this page.' }}</p>
                 </div>
               }
             </div>
