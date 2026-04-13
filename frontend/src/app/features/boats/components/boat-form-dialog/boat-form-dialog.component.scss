@@ -6,7 +6,8 @@
 .boat-form {
   display: grid;
   gap: 16px;
-  min-width: min(100vw - 64px, 420px);
+  width: min(calc(100vw - 64px), 620px);
+  max-width: 100%;
   padding-top: 8px;
 }
 
@@ -31,6 +32,6 @@ mat-form-field {
 
 @media (max-width: 599px) {
   .boat-form {
-    min-width: auto;
+    width: 100%;
   }
 }

@@ -1,0 +1,34 @@
+<h2 mat-dialog-title>Boat details</h2>
+
+<mat-dialog-content>
+  <dl class="details-list">
+    <div class="details-row">
+      <dt>ID</dt>
+      <dd>{{ boat.id }}</dd>
+    </div>
+
+    <div class="details-row">
+      <dt>Name</dt>
+      <dd>{{ boat.name }}</dd>
+    </div>
+
+    <div class="details-row">
+      <dt>Description</dt>
+      <dd>{{ boat.description || 'No description' }}</dd>
+    </div>
+
+    <div class="details-row">
+      <dt>Created by</dt>
+      <dd>{{ boat.createdBy }}</dd>
+    </div>
+
+    <div class="details-row">
+      <dt>Created at</dt>
+      <dd>{{ boat.createdAt | date: 'full' }}</dd>
+    </div>
+  </dl>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close type="button" cdkFocusInitial>Close</button>
+</mat-dialog-actions>

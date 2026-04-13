@@ -34,6 +34,10 @@ html.dark-mode .boat-dialog .mat-mdc-button {
   color: #f2f5f7;
 }
 
+.boat-dialog .mat-mdc-dialog-content {
+  overflow-x: hidden;
+}
+
 html.dark-mode .boat-dialog .mat-mdc-form-field {
   --mdc-outlined-text-field-input-text-color: #f2f5f7;
   --mdc-outlined-text-field-label-text-color: #a8b3bb;

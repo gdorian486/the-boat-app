@@ -1,0 +1,31 @@
+:host {
+  --details-label-opacity: 0.72;
+  display: block;
+}
+
+.details-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding-top: 8px;
+}
+
+.details-row {
+  display: grid;
+  gap: 6px;
+
+  dt {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: var(--details-label-opacity);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+}

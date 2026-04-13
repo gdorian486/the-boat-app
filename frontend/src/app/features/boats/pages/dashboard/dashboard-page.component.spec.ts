@@ -8,6 +8,7 @@ import Keycloak from 'keycloak-js';
 
 import { ThemeService } from '../../../../core/services/theme.service';
 import { Boat, BoatMutationPayload, UUID } from '../../models/boat.model';
+import { BoatDetailsDialogComponent } from '../../components/boat-details-dialog/boat-details-dialog.component';
 import { BoatDeleteConfirmDialogComponent } from '../../components/boat-delete-confirm-dialog/boat-delete-confirm-dialog.component';
 import { BoatFormDialogComponent } from '../../components/boat-form-dialog/boat-form-dialog.component';
 import { BoatsService } from '../../services/boats.service';
@@ -118,6 +119,49 @@ describe('DashboardPageComponent', () => {
     expect(headerCells).not.toContain('Created by');
   });
 
+  it('opens the details dialog when a table row is clicked', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    const dialogOpenSpy = mockDialogOpen(component);
+    fixture.detectChanges();
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector('tr.mat-mdc-row');
+    row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(BoatDetailsDialogComponent, {
+      data: { boat: boats[0] },
+      panelClass: ['boat-dialog'],
+      width: '640px',
+      maxWidth: 'calc(100vw - 32px)'
+    });
+  });
+
+  it('does not open the details dialog when clicking the update action', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    const component = fixture.componentInstance;
+    const dialogOpenSpy = mockDialogOpen(component);
+    fixture.detectChanges();
+
+    const updateButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      'button[aria-label="Update boat"]'
+    );
+    updateButton?.click();
+
+    expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
+    expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
+      data: {
+        mode: 'update',
+        boat: {
+          name: boats[0].name,
+          description: boats[0].description
+        }
+      },
+      panelClass: ['boat-dialog'],
+      width: '620px',
+      maxWidth: 'calc(100vw - 32px)'
+    });
+  });
+
   it('renders truncation wrappers with full values in title attributes', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
@@ -173,7 +217,9 @@ describe('DashboardPageComponent', () => {
 
     expect(dialogOpenSpy).toHaveBeenCalledWith(BoatFormDialogComponent, {
       data: { mode: 'create' },
-      panelClass: ['boat-dialog']
+      panelClass: ['boat-dialog'],
+      width: '620px',
+      maxWidth: 'calc(100vw - 32px)'
     });
     expect(createBoatSpy).toHaveBeenCalledWith(dialogResult);
     expect(getBoatsSpy).toHaveBeenCalledTimes(2);
@@ -199,7 +245,9 @@ describe('DashboardPageComponent', () => {
           description: boats[0].description
         }
       },
-      panelClass: ['boat-dialog']
+      panelClass: ['boat-dialog'],
+      width: '620px',
+      maxWidth: 'calc(100vw - 32px)'
     });
     expect(updateBoatSpy).toHaveBeenCalledWith(boats[0].id, dialogResult);
     expect(getBoatsSpy).toHaveBeenCalledTimes(2);

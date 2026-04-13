@@ -127,7 +127,8 @@
 }
 
 .table-wrapper {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-radius: 20px;
   border: 1px solid var(--dp-table-border);
   background: var(--dp-table-bg);
@@ -135,7 +136,6 @@
 
 .boats-table {
   width: 100%;
-  min-width: 960px;
   table-layout: fixed;
 
   // Angular Material dark mode tokens
@@ -145,6 +145,20 @@
 
 :host-context(.dark-mode) .boats-table {
   --mat-table-row-item-label-text-color: #e7f3f4;
+}
+
+.boat-row {
+  cursor: pointer;
+}
+
+.boat-row:hover td,
+.boat-row:focus-within td {
+  background: rgba(15, 118, 110, 0.06);
+}
+
+:host-context(.dark-mode) .boat-row:hover td,
+:host-context(.dark-mode) .boat-row:focus-within td {
+  background: rgba(94, 234, 212, 0.08);
 }
 
 .boats-table th,
@@ -300,6 +314,10 @@ mat-paginator {
   .create-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .boats-table {
+    min-width: 960px;
   }
 
   .boats-table .mat-column-id {
