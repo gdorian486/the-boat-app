@@ -11,6 +11,7 @@ import {
 import { routes } from './app.routes';
 import { RuntimeConfig } from './core/config/runtime-config';
 import { RUNTIME_CONFIG } from './core/config/runtime-config.token';
+import { authErrorRedirectInterceptor } from './core/interceptors/auth-error-redirect.interceptor';
 
 export function createAppConfig(runtimeConfig: RuntimeConfig): ApplicationConfig {
   const apiUrlCondition: IncludeBearerTokenCondition = {
@@ -41,7 +42,7 @@ export function createAppConfig(runtimeConfig: RuntimeConfig): ApplicationConfig
         provide: RUNTIME_CONFIG,
         useValue: runtimeConfig
       },
-      provideHttpClient(withFetch(), withInterceptors([includeBearerTokenInterceptor])),
+      provideHttpClient(withFetch(), withInterceptors([authErrorRedirectInterceptor, includeBearerTokenInterceptor])),
       provideRouter(routes)
     ]
   };
