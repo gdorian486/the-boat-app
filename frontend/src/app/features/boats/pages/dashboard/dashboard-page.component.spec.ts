@@ -119,6 +119,16 @@ describe('DashboardPageComponent', () => {
     expect(headerCells).not.toContain('Created by');
   });
 
+  it('renders a centered search input above the table', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const searchField = (fixture.nativeElement as HTMLElement).querySelector('.search-field input');
+
+    expect(searchField).not.toBeNull();
+    expect(searchField?.getAttribute('placeholder')).toBe('Search by name or description');
+  });
+
   it('opens the details dialog when a table row is clicked', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     const component = fixture.componentInstance;
@@ -441,6 +451,75 @@ describe('DashboardPageComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('No boats found');
+  });
+
+  it('filters boats by name', () => {
+    getBoatsSpy.and.returnValue(
+      of({
+        ...pagedResponse,
+        content: [
+          boats[0],
+          {
+            ...boats[0],
+            id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
+            name: 'Sea Mist',
+            description: 'Harbor shuttle'
+          }
+        ],
+        totalElements: 2,
+        numberOfElements: 2
+      })
+    );
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const searchInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.search-field input');
+    searchInput!.value = 'north';
+    searchInput!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(content).toContain('North Wind');
+    expect(content).not.toContain('Sea Mist');
+  });
+
+  it('filters boats by description and shows a search empty state when nothing matches', () => {
+    getBoatsSpy.and.returnValue(
+      of({
+        ...pagedResponse,
+        content: [
+          boats[0],
+          {
+            ...boats[0],
+            id: 'c56a4180-65aa-42ec-a945-5fd21dec0538' as UUID,
+            name: 'Sea Mist',
+            description: 'Harbor shuttle'
+          }
+        ],
+        totalElements: 2,
+        numberOfElements: 2
+      })
+    );
+
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const searchInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.search-field input');
+    searchInput!.value = 'shuttle';
+    searchInput!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    let content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(content).toContain('Sea Mist');
+    expect(content).not.toContain('North Wind');
+
+    searchInput!.value = 'zzz';
+    searchInput!.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    content = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(content).toContain('No boats match your search.');
   });
 
   it('calls keycloak.logout with the login redirect URI', () => {

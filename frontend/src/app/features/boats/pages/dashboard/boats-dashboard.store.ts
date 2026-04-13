@@ -1,4 +1,4 @@
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, EMPTY, Observable, startWith, Subject, switchMap, tap } from 'rxjs';
 
@@ -17,6 +17,20 @@ export class BoatsDashboardStore {
   private readonly paginationRequests = new Subject<{ page: number; size: number }>();
 
   readonly boats = signal<Boat[]>([]);
+  readonly searchTerm = signal('');
+  readonly filteredBoats = computed(() => {
+    const query = this.searchTerm().trim().toLocaleLowerCase();
+
+    if (!query) {
+      return this.boats();
+    }
+
+    return this.boats().filter((boat) => {
+      const name = boat.name.toLocaleLowerCase();
+      const description = boat.description?.toLocaleLowerCase() ?? '';
+      return name.includes(query) || description.includes(query);
+    });
+  });
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly totalElements = signal(0);
@@ -53,6 +67,10 @@ export class BoatsDashboardStore {
 
   loadPage(page: number, size: number): void {
     this.paginationRequests.next({ page, size });
+  }
+
+  setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
   }
 
   reload(): void {

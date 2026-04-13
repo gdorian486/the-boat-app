@@ -1,9 +1,12 @@
 import { DatePipe, DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -24,9 +27,12 @@ import { BoatsDashboardStore } from './boats-dashboard.store';
   selector: 'app-dashboard-page',
   imports: [
     DatePipe,
+    FormsModule,
     MatButtonModule,
     MatCardModule,
     MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -52,6 +58,7 @@ export class DashboardPageComponent {
   protected readonly toggleTheme = () => this.themeService.toggleTheme();
   protected readonly username: string = this.keycloak.tokenParsed?.['preferred_username'] ?? '';
   protected readonly displayedColumns = ['id', 'name', 'description', 'createdAt', 'actions'];
+  protected readonly searchTerm = this.store.searchTerm;
 
   protected logout(): void {
     this.keycloak.logout({
@@ -63,6 +70,10 @@ export class DashboardPageComponent {
 
   protected onPageChange(event: PageEvent): void {
     this.store.loadPage(event.pageIndex, event.pageSize);
+  }
+
+  protected onSearchTermChange(value: string): void {
+    this.store.setSearchTerm(value);
   }
 
   protected trackBoat(_index: number, boat: Boat): string {
