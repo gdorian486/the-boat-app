@@ -7,6 +7,18 @@
   --dialog-muted: #a8b3bb;
 }
 
+.delete-question {
+  width: min(calc(100vw - 64px), 460px);
+  max-width: 100%;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.boat-name {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .dialog-copy {
   margin: 8px 0 0;
   color: var(--dialog-muted);

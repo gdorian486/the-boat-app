@@ -85,7 +85,7 @@
                       mat-icon-button
                       type="button"
                       aria-label="Update boat"
-                      (click)="openUpdateDialog(boat)"
+                      (click)="$event.stopPropagation(); openUpdateDialog(boat)"
                     >
                       <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 20h4l10.5-10.5-4-4L4 16v4z" />
@@ -96,7 +96,7 @@
                       mat-icon-button
                       type="button"
                       aria-label="Delete boat"
-                      (click)="confirmDelete(boat)"
+                      (click)="$event.stopPropagation(); confirmDelete(boat)"
                     >
                       <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M5 7h14" />
@@ -110,7 +110,15 @@
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let _row; columns: displayedColumns"></tr>
+                <tr
+                  mat-row
+                  *matRowDef="let row; columns: displayedColumns"
+                  class="boat-row"
+                  tabindex="0"
+                  (click)="openDetailsDialog(row)"
+                  (keydown.enter)="openDetailsDialog(row)"
+                  (keydown.space)="openDetailsDialog(row); $event.preventDefault()"
+                ></tr>
               </table>
 
               @if (!store.isLoading() && store.boats().length === 0) {

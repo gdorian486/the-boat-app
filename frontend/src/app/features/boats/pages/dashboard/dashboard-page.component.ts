@@ -15,6 +15,7 @@ import { catchError, EMPTY, filter, switchMap, take } from 'rxjs';
 import { APP_PATHS } from '../../../../app.routes.constants';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { Boat, BoatMutationPayload } from '../../models/boat.model';
+import { BoatDetailsDialogComponent } from '../../components/boat-details-dialog/boat-details-dialog.component';
 import { BoatDeleteConfirmDialogComponent } from '../../components/boat-delete-confirm-dialog/boat-delete-confirm-dialog.component';
 import { BoatFormDialogComponent } from '../../components/boat-form-dialog/boat-form-dialog.component';
 import { BoatsDashboardStore } from './boats-dashboard.store';
@@ -68,11 +69,22 @@ export class DashboardPageComponent {
     return boat.id;
   }
 
+  protected openDetailsDialog(boat: Boat): void {
+    this.dialog.open(BoatDetailsDialogComponent, {
+      data: { boat },
+      panelClass: ['boat-dialog'],
+      width: '640px',
+      maxWidth: 'calc(100vw - 32px)'
+    });
+  }
+
   protected openCreateDialog(): void {
     this.dialog
       .open(BoatFormDialogComponent, {
         data: { mode: 'create' },
-        panelClass: ['boat-dialog']
+        panelClass: ['boat-dialog'],
+        width: '620px',
+        maxWidth: 'calc(100vw - 32px)'
       })
       .afterClosed()
       .pipe(
@@ -98,7 +110,9 @@ export class DashboardPageComponent {
           mode: 'update',
           boat: { name: boat.name, description: boat.description }
         },
-        panelClass: ['boat-dialog']
+        panelClass: ['boat-dialog'],
+        width: '620px',
+        maxWidth: 'calc(100vw - 32px)'
       })
       .afterClosed()
       .pipe(
@@ -139,7 +153,6 @@ export class DashboardPageComponent {
       )
       .subscribe();
   }
-
 
   private showMutationError(message: string): void {
     this.snackBar.open(message, 'Close', {
